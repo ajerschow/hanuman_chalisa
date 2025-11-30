@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Toggle Line Breaks with Checkbox (JS Version)</title>
+
+<style>
+  /* Class to hide <br> elements */
+  .hide-breaks br {
+    display: none;
+  }
+
+  /* Optional: nicer checkbox styling */
+  #toggleBreaks { margin: 1rem 0; }
+</style>
+</head>
+<body>
+
+<label>
+  <input type="checkbox" id="toggleBreaks" checked>  <!-- Start with checked (breaks visible) -->
+  Show line breaks in the box(es) below
+</label>
+
+<div id="myContainer" class="hide-breaks">  <!-- Default: hidden until checked -->
+  Line one<br>
+  Line two<br>
+  Line three<br><br>
+  Blank line above<br>
+  Line five<br>
+  Line six
+</div>
+
+<!-- Optional: Another container for multiple -->
+<div class="breakable">
+  Another<br>
+  box<br>
+  here
+</div>
+
+<script>
+  // Explicit event listener for checkbox change
+  const checkbox = document.getElementById('toggleBreaks');
+  const containers = document.querySelectorAll('#myContainer, .breakable');  // Targets one or more
+
+  // Function to toggle based on checkbox state
+  function toggleBreaks() {
+    containers.forEach(container => {
+      if (checkbox.checked) {
+        container.classList.remove('hide-breaks');  // Show <br>
+      } else {
+        container.classList.add('hide-breaks');     // Hide <br>
+      }
+    });
+  }
+
+  // Initial call to set state (in case default is unchecked)
+  toggleBreaks();
+
+  // Listen for changes (includes click, keyboard, etc.)
+  checkbox.addEventListener('change', toggleBreaks);
+</script>
+
+</body>
+</html>

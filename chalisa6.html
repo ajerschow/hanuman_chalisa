@@ -152,6 +152,16 @@
             color: #888;
         }
 
+        .hide-breaks br {
+            display: none;
+        }
+
+        .colored-symbol {
+            /* color: #f0d5bc;  Change to your desired color */
+            margin-right: 6px;
+            font-style: normal;
+        }
+
         .modal-word { font-size: 2em; color: var(--primary); margin: 0; }
         .modal-translit { font-size: 1.2em; font-style: italic; margin-bottom: 15px; color: #555; }
         
@@ -172,10 +182,13 @@
         <label class="toggle-label">
             <input type="checkbox" id="toggle-transl">Hide English Translation
         </label>
+        <label class="toggle-label">
+            <input type="checkbox" id="toggle-br">Breaks verses into lines
+        </label>
     </div>
 </header>
 
-<div id="chalisa-container">
+<div id="chalisa-container" class="hide-breaks">
     </div>
 
 <div class="modal-overlay" id="modal">
@@ -1022,8 +1035,8 @@
             verse.words.forEach((word, wordIdx) => {
                 // Store data indices in data attributes
                 switch (word.text) {
-                    case "|": devanagariHTML += "|"; break;
-                    case "||": devanagariHTML += "||"; break;
+                    case "|": devanagariHTML += '<span class="colored-symbol">|</span>'; break;
+                    case "||": devanagariHTML += '<span class="colored-symbol">||</span>'; break;
                     case "<br>": devanagariHTML += "<br>"; break;
                     default:
                         devanagariHTML += `<span class="word-span" onclick="openWord(${index}, ${wordIdx})">${word.text}</span> `;
@@ -1036,8 +1049,8 @@
             verse.words.forEach((word, wordIdx) => {
                 // Store data indices in data attributes
                 switch (word.text) {
-                    case "|": transliterationHTML += "|"; break;
-                    case "||": transliterationHTML += "||"; break;
+                    case "|": transliterationHTML += '<span class="colored-symbol">|</span>'; break;
+                    case "||": transliterationHTML += '<span class="colored-symbol">||</span>'; break;
                     case "<br>": transliterationHTML += "<br>"; break;
                     default:
                         transliterationHTML += `<span class="word-span" onclick="openWord(${index}, ${wordIdx})">${word.transliteration}</span> `;
@@ -1071,21 +1084,22 @@
     // Toggles
     const toggleTranslit = document.getElementById('toggle-translit');
     const toggleTransl = document.getElementById('toggle-transl');
+    const toggleBr = document.getElementById('toggle-br');
 
     // Add Listeners
     toggleTranslit.addEventListener('change', updateVisibility);
     toggleTransl.addEventListener('change', updateVisibility);
 
 
-    toggleTranslit.addEventListener('change', (e) => {
-        if(e.target.checked) document.body.classList.add('show-translit');
-        else document.body.classList.remove('show-translit');
-    });
+    // toggleTranslit.addEventListener('change', (e) => {
+    //     if(e.target.checked) document.body.classList.add('show-translit');
+    //     else document.body.classList.remove('show-translit');
+    // });
 
-    toggleTransl.addEventListener('change', (e) => {
-        if(e.target.checked) document.body.classList.add('show-transl');
-        else document.body.classList.remove('show-transl');
-    });
+    // toggleTransl.addEventListener('change', (e) => {
+    //     if(e.target.checked) document.body.classList.add('show-transl');
+    //     else document.body.classList.remove('show-transl');
+    // });
 
     // Modal Logic
     const modal = document.getElementById('modal');
@@ -1115,6 +1129,27 @@
             closeModal();
         }
     }
+
+     // Explicit event listener for checkbox change
+    const checkbox = document.getElementById('toggle-br');
+    const containers = document.querySelectorAll('#chalisa-container, .breakable');  // Targets one or more
+
+  // Function to toggle based on checkbox state
+  function toggleBreaks() {
+    containers.forEach(container => {
+      if (checkbox.checked) {
+        container.classList.remove('hide-breaks');  // Show <br>
+      } else {
+        container.classList.add('hide-breaks');     // Hide <br>
+      }
+    });
+  }
+
+  // Initial call to set state (in case default is unchecked)
+  toggleBreaks();
+
+  // Listen for changes (includes click, keyboard, etc.)
+  checkbox.addEventListener('change', toggleBreaks);
 
     // Initialize
     renderChalisa();

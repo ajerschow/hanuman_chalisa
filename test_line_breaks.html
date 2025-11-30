@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Toggle line breaks with checkbox</title>
+
+<style>
+  /* Default: hide all <br> inside the container */
+  #myContainer.hide-breaks br {
+    display: none;
+  }
+
+  /* When checkbox is CHECKED → show the <br> tags normally */
+  #toggleBreaks:checked ~ #myContainer br {
+    display: block;           /* or "inline" if you prefer */
+  }
+
+  /* Optional: nicer checkbox styling */
+  #toggleBreaks { margin: 1rem 0; }
+</style>
+</head>
+<body>
+
+<label>
+  <input type="checkbox" id="toggleBreaks">
+  Show line breaks inside the box below
+</label>
+
+<div id="myContainer" class="hide-breaks">
+  Line one<br>
+  Line two<br>
+  Line three<br><br>
+  This is a blank line above<br>
+  Line five<br>
+  Line six
+</div>
+
+<!-- Pure CSS version (no JS) – works perfectly in modern browsers -->
+<script>
+  // If you need to support very old browsers, add this tiny fallback:
+  document.getElementById('toggleBreaks').addEventListener('change', function () {
+    document.getElementById('myContainer')
+            .classList.toggle('hide-breaks', !this.checked);
+  });
+</script>
+
+</body>
+</html>
