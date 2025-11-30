@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Hanuman Chalisa</title>
+    <style>
+        :root {
+            --primary: #FF9933; /* Saffron */
+            --text-dark: #2c3e50;
+            --text-light: #555;
+            --bg-color: #fdfbf7;
+            --modal-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        /* Controls Header */
+        header {
+            text-align: center;
+            padding: 20px;
+            border-bottom: 2px solid var(--primary);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .toggle-label {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 600;
+            user-select: none;
+        }
+
+        /* Container for Verses */
+        #chalisa-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .verse-block {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        .verse-type {
+            font-size: 0.8em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        /* Word Styling */
+        .devanagari-line {
+            font-size: 1.8em;
+            margin-bottom: 8px;
+            color: #000;
+        }
+
+        .word-span {
+            cursor: pointer;
+            transition: color 0.2s, background 0.2s;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .word-span:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        /* Toggleable Sections */
+        .transliteration-line {
+            font-style: italic;
+            color: #666;
+            margin-bottom: 15px;
+            /* line-height: 1.5; */
+            display: block; /* Hidden by default */
+        }
+
+        .translation-line {
+            color: #2c3e50;
+            font-weight: 500;
+            margin-top: 5px;
+            display: block; /* Hidden by default */
+        }
+
+        /* Visibility Classes controlled by JS */
+        /* body.show-translit .transliteration-line { display: block; }
+        body.show-transl .translation-line { display: block; } */
+
+        /* HIDING Classes - These apply when the box is checked */
+        body.hide-translit .transliteration-line { display: none; }
+        body.hide-transl .translation-line { display: none; }
+
+        /* Modal/Popup Styling */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: var(--modal-bg);
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            border-top: 5px solid var(--primary);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #888;
+        }
+
+        .modal-word { font-size: 2em; color: var(--primary); margin: 0; }
+        .modal-translit { font-size: 1.2em; font-style: italic; margin-bottom: 15px; color: #555; }
+        
+        .detail-row { margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .detail-label { font-weight: bold; color: var(--text-dark); display: block; font-size: 0.9em; }
+        .detail-text { color: var(--text-light); }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Hanuman Chalisa</h1>
+    <div class="controls">
+        <label class="toggle-label">
+            <input type="checkbox" id="toggle-translit">Hide Transliteration
+        </label>
+        <label class="toggle-label">
+            <input type="checkbox" id="toggle-transl">Hide English Translation
+        </label>
+    </div>
+</header>
+
+<div id="chalisa-container">
+    </div>
+
+<div class="modal-overlay" id="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeModal()">&times;</span>
+        <h2 id="m-word" class="modal-word"></h2>
+        <div id="m-translit" class="modal-translit"></div>
+        
+        <div class="detail-row">
+            <span class="detail-label">Translation</span>
+            <span id="m-translation" class="detail-text"></span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Hindi Equivalent</span>
+            <span id="m-hindi" class="detail-text"></span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Sanskrit Etymology / Grammar</span>
+            <span id="m-etymology" class="detail-text"></span>
+        </div>
+        <div class="detail-row" style="border:none;">
+            <span class="detail-label">Cultural Note</span>
+            <span id="m-note" class="detail-text"></span>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 1. THE DATA STRUCTURE
+    // This is where you populate the verses. I have done the first Doha as an example.
+    const chalisaData = [
+        {
+        type: "Invocation",
+        verseIndex: 1,
+        fullTransliteration: "Mangala mūrati māruta nandana | Sakala amangala mūla nikandana ||",
+        fullTranslation: "Embodiment of auspiciousness, son of the Wind God. You are the destroyer of the very root of all inauspiciousness.",
+        words: [
+            { text: "मंगल", transliteration: "Mangala", translation: "Auspiciousness", hindi: "शुभ / कल्याण", etym: "Skt: Mangala.", note: "Bliss, welfare, and good fortune." },
+            { text: "मूरति", transliteration: "mūrati", translation: "Form/Embodiment", hindi: "मूर्ति / स्वरूप", etym: "Skt: Murti.", note: "The physical manifestation." },
+            { text: "मारुत", transliteration: "māruta", translation: "Wind", hindi: "वायु / हवा", etym: "Skt: Marut.", note: "Referring to the Wind God (Vayu)." },
+            { text: "नंदन", transliteration: "nandana", translation: "Son/Delight", hindi: "पुत्र / आनंद देने वाला", etym: "Skt: Nand (To rejoice).", note: "Son who brings joy." },
+            { text: "|", transliteration: "|"},
+            { text: "<br>", transliteration: "<br>"},
+            { text: "सकल", transliteration: "sakala", translation: "All/Entire", hindi: "सम्पूर्ण", etym: "Sa (With) + Kala (Part) = Whole.", note: "Every bit of." },
+            { text: "अमंगल", transliteration: "amangala", translation: "Inauspiciousness", hindi: "अशुभ / दुख", etym: "A (Not) + Mangala.", note: "Misfortune, sorrow, and evil." },
+            { text: "मूल", transliteration: "mūla", translation: "Root", hindi: "जड़", etym: "Skt: Mula.", note: "The source or origin." },
+            { text: "निकंदन", transliteration: "nikandana", translation: "Destroyer", hindi: "नाश करने वाले", etym: "Ni-Krit (To cut down completely).", note: "He who eradicates problems from their very root." },
+            { text: "||", transliteration: "||"},
+        ]
+        },
+        {
+            type: "Doha",
+            verseIndex: 1,
+            fullTransliteration: "Śrīguru charana saroja raja nija manu mukuru sudhāri | Baranau raghubara bimala jasu jo dāyaku phala chāri ||",
+            fullTranslation: "Cleansing the mirror of my mind with the dust of the Guru's lotus feet, I describe the pure glory of Lord Rama, which bestows the four fruits of life.",
+            words: [
+                { text: "श्रीगुरु", transliteration: "Śrīguru", translation: "Respected Guru", hindi: "आदरणीय गुरु", etym: "Sanskrit: Sri (Radiance) + Guru (Teacher).", note: "The remover of darkness." },
+                { text: "चरन", transliteration: "charana", translation: "Feet", hindi: "चरण", etym: "Skt: Charana.", note: "Symbol of humility." },
+                { text: "सरोज", transliteration: "saroja", translation: "Lotus", hindi: "कमल", etym: "Skt: Saras (Lake) + Ja (Born).", note: "Symbol of purity." },
+                { text: "रज", transliteration: "raja", translation: "Dust", hindi: "धूल", etym: "Skt: Rajas.", note: "Sacred dust/blessings." },
+                { text: "<br>", transliteration: "<br>"},
+                { text: "निज", transliteration: "nija", translation: "Own", hindi: "अपने", etym: "Skt: Nija.", note: "Internal/Personal." },
+                { text: "मनु", transliteration: "manu", translation: "Mind", hindi: "मन", etym: "Skt: Manas.", note: "The seat of thought." },
+                { text: "मुकुरु", transliteration: "mukuru", translation: "Mirror", hindi: "दर्पण", etym: "Skt: Mukura.", note: "The mind reflects the soul." },
+                { text: "सुधारि", transliteration: "sudhāri", translation: "Cleansing", hindi: "साफ करना", etym: "Skt: Sudh (Purify).", note: "Spiritual practice." },
+                { text: "|", transliteration: "|"},
+                { text: "<br>", transliteration: "<br>"},
+                { text: "बरनउँ", transliteration: "baranau", translation: "Describe", hindi: "वर्णन करता हूँ", etym: "Skt: Varnana.", note: "To narrate." },
+                { text: "रघुबर", transliteration: "raghubara", translation: "Rama", hindi: "राम", etym: "Best of the Raghu clan.", note: "Lord Rama." },
+                { text: "बिमल", transliteration: "bimala", translation: "Pure", hindi: "स्वच्छ", etym: "Skt: Vimala (Spotless).", note: "Without blemish." },
+                { text: "जसु", transliteration: "jasu", translation: "Glory/Fame", hindi: "यश", etym: "Skt: Yashas.", note: "Divine reputation." },
+                { text: "<br>", transliteration: "<br>"},
+                { text: "जो", transliteration: "jo", translation: "Which", hindi: "जो", etym: "Relative pronoun.", note: "-" },
+                { text: "दायकु", transliteration: "dāyaku", translation: "Giver", hindi: "देने वाला", etym: "Skt: Dayaka.", note: "Bestower." },
+                { text: "फल", transliteration: "phala", translation: "Fruit", hindi: "फल", etym: "Skt: Phala.", note: "Result of action." },
+                { text: "चारि", transliteration: "chāri", translation: "Four", hindi: "चार", etym: "Skt: Chatur.", note: "Dharma, Artha, Kama, Moksha." },
+                { text: "||", transliteration: "||"},
+            ]
+        },
+        {
+            type: "Doha",
+            verseIndex: 2,
+            fullTransliteration: "Buddhi hina tanu jānike sumirau pavana kumāra | Bala buddhi vidyā dehu mohi harahu kalesa bikāra ||",
+            fullTranslation: "Knowing my body to be devoid of intelligence, I remember the Son of the Wind. Give me strength, intelligence, and wisdom, and remove my suffering and impurities.",
+            words: [
+                { text: "बुद्धि", transliteration: "Buddhi", translation: "Intellect", hindi: "बुद्धि", etym: "Skt: Budh (To know).", note: "Discriminating faculty." },
+                { text: "हीन", transliteration: "hina", translation: "Devoid of", hindi: "रहित", etym: "Skt: Hina (Abandoned).", note: "Lacking." },
+                { text: "तनु", transliteration: "tanu", translation: "Body", hindi: "शरीर", etym: "Skt: Tanu.", note: "Physical form." },
+                { text: "जानिके", transliteration: "jānike", translation: "Knowing", hindi: "जानकर", etym: "Skt: Jna (Know).", note: "Realizing." },
+                { text: "<br>", transliteration: "<br>"},
+                { text: "सुमिरौं", transliteration: "sumirau", translation: "Remember", hindi: "स्मरण करता हूँ", etym: "Skt: Smaran.", note: "Devotional remembrance." },
+                { text: "पवन", transliteration: "pavana", translation: "Wind", hindi: "हवा/वायु", etym: "Skt: Pavana.", note: "The Wind God." },
+                { text: "कुमार", transliteration: "kumāra", translation: "Son", hindi: "पुत्र", etym: "Skt: Kumara.", note: "Hanuman." },
+                { text: "|", transliteration: "|"},
+                { text: "<br>", transliteration: "<br>"},
+                { text: "बल", transliteration: "bala", translation: "Strength", hindi: "शक्ति", etym: "Skt: Bala.", note: "Physical/Spiritual power." },
+                { text: "विद्या", transliteration: "vidyā", translation: "Knowledge", hindi: "ज्ञान", etym: "Skt: Vid (To know).", note: "Spiritual wisdom." },
+                { text: "देहु", transliteration: "dehu", translation: "Give", hindi: "दीजिये", etym: "Imperative form.", note: "A plea." },
+                { text: "मोहि", transliteration: "mohi", translation: "Me", hindi: "मुझे", etym: "Regional form.", note: "The devotee." },
+                { text: "<br>", transliteration: "<br>"},
+                { text: "हरहु", transliteration: "harahu", translation: "Remove/Steal", hindi: "हर लीजिये", etym: "Skt: Hri (To take away).", note: "Take away my pain." },
+                { text: "कलेस", transliteration: "kalesa", translation: "Suffering", hindi: "क्लेश/कष्ट", etym: "Skt: Klesha.", note: "Afflictions of life." },
+                { text: "बिकार", transliteration: "bikāra", translation: "Impurities", hindi: "दोष", etym: "Skt: Vikara.", note: "Lust, anger, greed, etc." },
+                { text: "||", transliteration: "||"},
+            ]
+        },
+        {
+            type: "Chaupai",
+            verseIndex: 1,
+            fullTransliteration: "Jaya Hanumāna gyāna guna sāgara | Jaya kapīsa tihū loka ujāgara ||",
+            fullTranslation: "Victory to Hanuman, the ocean of knowledge and virtues. Victory to the Lord of Monkeys, who illuminates the three worlds.",
+            words: [
+                { text: "जय", transliteration: "Jaya", translation: "Victory", hindi: "विजय", etym: "Skt: Ji (Conquer).", note: "A shout of triumph." },
+                { text: "हनुमान", transliteration: "Hanumāna", translation: "Hanuman", hindi: "हनुमान", etym: "Hanu (Jaw) + Man (Possessing).", note: "One with a prominent jaw." },
+                { text: "ज्ञान", transliteration: "gyāna", translation: "Knowledge", hindi: "ज्ञान", etym: "Skt: Jnana.", note: "Divine wisdom." },
+                { text: "गुन", transliteration: "guna", translation: "Virtues", hindi: "गुण", etym: "Skt: Guna.", note: "Qualities/Talents." },
+                { text: "सागर", transliteration: "sāgara", translation: "Ocean", hindi: "सागर", etym: "Skt: Sagara.", note: "Infinite depth." },
+                { text: "कपीस", transliteration: "kapīsa", translation: "Lord of Monkeys", hindi: "वानर राज", etym: "Kapi (Monkey) + Isa (Lord).", note: "King Sugriva or Hanuman." },
+                { text: "तिहुँ", transliteration: "tihū", translation: "Three", hindi: "तीनों", etym: "Skt: Tri.", note: "Heaven, Earth, Underworld." },
+                { text: "लोक", transliteration: "loka", translation: "Worlds", hindi: "लोक", etym: "Skt: Loka.", note: "Realms of existence." },
+                { text: "उजागर", transliteration: "ujāgara", translation: "Illuminator", hindi: "प्रकाशित करने वाला", etym: "Uj (Up) + Jagri (Awake).", note: "One who brings light/fame." }
+            ]
+        },
+        {
+            type: "Chaupai",
+            verseIndex: 2,
+            fullTransliteration: "Rāma dūta atulita bala dhāmā | Anjani putra pavanasuta nāmā ||",
+            fullTranslation: "Messenger of Rama, abode of immeasurable strength, called the son of Anjani and the son of the Wind.",
+            words: [
+                { text: "राम", transliteration: "Rāma", translation: "Rama", hindi: "राम", etym: "Skt: Ram (To rejoice).", note: "The 7th Avatar of Vishnu." },
+                { text: "दूत", transliteration: "dūta", translation: "Messenger", hindi: "दूत / संदेशवाहक", etym: "Skt: Duta.", note: "An emissary who carries the Lord's message." },
+                { text: "अतुलित", transliteration: "atulita", translation: "Immeasurable", hindi: "जिसकी तुलना न हो सके", etym: "A (Not) + Tula (Scale/Weight).", note: "Beyond comparison." },
+                { text: "बल", transliteration: "bala", translation: "Strength", hindi: "शक्ति", etym: "Skt: Bala.", note: "Physical and spiritual might." },
+                { text: "धामा", transliteration: "dhāmā", translation: "Abode/Home", hindi: "धाम / घर", etym: "Skt: Dhaman.", note: "A vessel or repository." },
+                { text: "अंजनि", transliteration: "Anjani", translation: "Anjani", hindi: "माता अंजनी", etym: "Proper Noun.", note: "Hanuman's mother." },
+                { text: "पुत्र", transliteration: "putra", translation: "Son", hindi: "पुत्र", etym: "Skt: Putra.", note: "Male offspring." },
+                { text: "पवनसुत", transliteration: "pavanasuta", translation: "Son of Wind", hindi: "पवन पुत्र", etym: "Pavana (Wind) + Suta (Son).", note: "Spiritually born of the Wind God (Vayu)." },
+                { text: "नामा", transliteration: "nāmā", translation: "Named", hindi: "नाम", etym: "Skt: Naman.", note: "Known by this name." }
+            ]
+        },
+        {
+            type: "Chaupai",
+            verseIndex: 3,
+            fullTransliteration: "Mahābīra bikrama bajarangī | Kumati nivāra sumati ke sangī ||",
+            fullTranslation: "Great hero, mighty and with body like a thunderbolt, remover of evil intellect and companion of those with good intellect.",
+            words: [
+                { text: "महाबीर", transliteration: "Mahābīra", translation: "Great Hero", hindi: "महान वीर", etym: "Maha (Great) + Vira (Hero).", note: "One of the most popular names of Hanuman." },
+                { text: "बिक्रम", transliteration: "bikrama", translation: "Valour", hindi: "पराक्रम", etym: "Skt: Vikrama (Stride/Prowess).", note: "Referring to his immense courage." },
+                { text: "बजरंगी", transliteration: "bajarangī", translation: "Thunderbolt Body", hindi: "वज्र के समान अंगों वाले", etym: "Vajra (Thunderbolt/Diamond) + Anga (Body).", note: "Often mispronounced as 'Orange-colored'. It actually means his body is as hard as Indra's weapon." },
+                { text: "कुमति", transliteration: "kumati", translation: "Bad Intellect", hindi: "कुबुद्धि", etym: "Ku (Bad) + Mati (Mind).", note: "Negative thoughts, ignorance." },
+                { text: "निवार", transliteration: "nivāra", translation: "Remover", hindi: "निवारण करने वाले", etym: "Skt: Nivari (To ward off).", note: "He who dispels darkness." },
+                { text: "सुमति", transliteration: "sumati", translation: "Good Intellect", hindi: "सुबुद्धि", etym: "Su (Good) + Mati (Mind).", note: "Wisdom and righteous thinking." },
+                { text: "के", transliteration: "ke", translation: "Of", hindi: "के", etym: "Postposition.", note: "-" },
+                { text: "संगी", transliteration: "sangī", translation: "Companion", hindi: "साथी", etym: "Skt: Sangin.", note: "One who accompanies the wise." }
+            ]
+        },
+        {
+            type: "Chaupai",
+            verseIndex: 4,
+            fullTransliteration: "Kanchana barana birāja subesā | Kānana kundala kunchita kesā ||",
+            fullTranslation: "Golden complexioned, beautifully dressed, with ear-rings and curly hair.",
+            words: [
+                { text: "कंचन", transliteration: "Kanchana", translation: "Gold", hindi: "सोना / स्वर्ण", etym: "Skt: Kanchana.", note: "Refers to his glowing, golden skin tone." },
+                { text: "बरन", transliteration: "barana", translation: "Color/Complexion", hindi: "वर्ण / रंग", etym: "Skt: Varna.", note: "Hue or class." },
+                { text: "बिराज", transliteration: "birāja", translation: "Resplendent", hindi: "विराजमान", etym: "Vi (Intensive) + Raj (Shine).", note: "Shining forth." },
+                { text: "सुबेसा", transliteration: "subesā", translation: "Good Dress", hindi: "सुंदर वेश", etym: "Su (Good) + Vesha (Attire).", note: "Beautifully adorned." },
+                { text: "कानन", transliteration: "kānana", translation: "In Ears", hindi: "कानों में", etym: "Skt: Karna.", note: "Locative case." },
+                { text: "कुंडल", transliteration: "kundala", translation: "Earrings", hindi: "कुंडल", etym: "Skt: Kundala (Coil/Ring).", note: "Large hoop earrings worn by warriors/yogis." },
+                { text: "कुंचित", transliteration: "kunchita", translation: "Curly", hindi: "घुंघराले", etym: "Skt: Kunch (To curve).", note: "Curled locks of hair." },
+                { text: "केसा", transliteration: "kesā", translation: "Hair", hindi: "बाल", etym: "Skt: Kesha.", note: "His mane/hair." }
+            ]
+        },
+        {
+            type: "Chaupai",
+            verseIndex: 5,
+            fullTransliteration: "Hātha bajra au dhvajā birājai | Kāndhe mūnja janeū sājai ||",
+            fullTranslation: "Holding the thunderbolt and flag in hand, wearing the sacred thread of Munja grass on the shoulder.",
+            words: [
+                { text: "हाथ", transliteration: "Hātha", translation: "Hand", hindi: "हाथ", etym: "Skt: Hasta.", note: "Physical hand." },
+                { text: "बज्र", transliteration: "bajra", translation: "Thunderbolt/Mace", hindi: "गदा / वज्र", etym: "Skt: Vajra.", note: "Symbol of strength and indestructibility." },
+                { text: "औ", transliteration: "au", translation: "And", hindi: "और", etym: "Short for Aur.", note: "Conjunction." },
+                { text: "ध्वजा", transliteration: "dhvajā", translation: "Flag", hindi: "ध्वज / झंडा", etym: "Skt: Dhvaja.", note: "Victory flag or religious standard." },
+                { text: "बिराजै", transliteration: "birājai", translation: "Sits/Adorns", hindi: "विराजमान है", etym: "Skt: Viraj.", note: "Is present majestically." },
+                { text: "कांधे", transliteration: "kāndhe", translation: "Shoulder", hindi: "कंधे पर", etym: "Skt: Skandha.", note: "On the shoulder." },
+                { text: "मूँज", transliteration: "mūnja", translation: "Munja Grass", hindi: "मूँज घास", etym: "Saccharum munja.", note: "A sacred grass used for the girdle of a Brahmin student." },
+                { text: "जनेऊ", transliteration: "janeū", translation: "Sacred Thread", hindi: "यज्ञोपवीत", etym: "Skt: Yajnopavita.", note: "The thread ceremony mark; shows he is a learned Brahmachari." },
+                { text: "साजै", transliteration: "sājai", translation: "Beautifies", hindi: "शोभा देता है", etym: "Skt: Sajja (Prepared/Decorated).", note: "Looks beautiful." }
+            ]
+        },
+        {
+        type: "Chaupai",
+        verseIndex: 6,
+        fullTransliteration: "Vidyāvāna gunī ati chātur | Rāma kāja karibe ko ātur ||",
+        fullTranslation: "Full of knowledge, virtuous and very clever, always eager to do Rama's work.",
+        words: [
+            { text: "विद्यावान", transliteration: "Vidyāvāna", translation: "Learned", hindi: "ज्ञानी", etym: "Vidya (Knowledge) + Van (Possessor).", note: "Master of the Vedas and scriptures." },
+            { text: "गुनी", transliteration: "gunī", translation: "Virtuous", hindi: "गुणवान", etym: "Skt: Gunin.", note: "Possessing all divine qualities." },
+            { text: "अति", transliteration: "ati", translation: "Very/Extremely", hindi: "अत्यंत", etym: "Prefix 'Ati'.", note: "Modifier indicating intensity." },
+            { text: "चातुर", transliteration: "chātur", translation: "Clever/Skillful", hindi: "चतुर", etym: "Skt: Chatura.", note: "Skillful in execution of tasks." },
+            { text: "राम", transliteration: "Rāma", translation: "Rama", hindi: "राम", etym: "Proper Noun.", note: "The Lord." },
+            { text: "काज", transliteration: "kāja", translation: "Work/Task", hindi: "कार्य", etym: "Derived from Skt 'Karya'.", note: "Divine mission." },
+            { text: "करिबे", transliteration: "karibe", translation: "To do", hindi: "करने के लिए", etym: "Braj Bhasha verb form.", note: "Purpose." },
+            { text: "को", transliteration: "ko", translation: "For", hindi: "को", etym: "Postposition.", note: "-" },
+            { text: "आतुर", transliteration: "ātur", translation: "Eager/Restless", hindi: "बेचैन / उत्सुक", etym: "Skt: A-tura (Not calm/excited).", note: "Showing intense devotion and readiness." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 7,
+        fullTransliteration: "Prabhu charitra sunibe ko rasiyā | Rāma lakhana sītā mana basiyā ||",
+        fullTranslation: "Delighting in listening to the Lord's deeds, Rama, Lakshmana, and Sita dwell in your heart.",
+        words: [
+            { text: "प्रभु", transliteration: "Prabhu", translation: "Lord", hindi: "स्वामी", etym: "Skt: Prabhu (Master).", note: "Referring to Rama." },
+            { text: "चरित्र", transliteration: "charitra", translation: "Character/Story", hindi: "चरित्र / कथा", etym: "Skt: Charitra.", note: "The Leela (divine play) of the Lord." },
+            { text: "सुनिबे", transliteration: "sunibe", translation: "To listen", hindi: "सुनने को", etym: "Braj Bhasha form.", note: "The act of hearing (Shravanam)." },
+            { text: "को", transliteration: "ko", translation: "For", hindi: "के लिए", etym: "-", note: "-" },
+            { text: "रसिया", transliteration: "rasiyā", translation: "Connoisseur", hindi: "आनंद लेने वाला", etym: "Rasa (Essence/Juice) + Iya.", note: "One who savors the sweetness of devotion." },
+            { text: "राम", transliteration: "Rāma", translation: "Rama", hindi: "राम", etym: "-", note: "-" },
+            { text: "लखन", transliteration: "lakhana", translation: "Lakshmana", hindi: "लक्ष्मण", etym: "Derived from Lakshmana.", note: "Rama's brother." },
+            { text: "सीता", transliteration: "sītā", translation: "Sita", hindi: "सीता", etym: "Furrow (Earth born).", note: "Rama's consort." },
+            { text: "मन", transliteration: "mana", translation: "Mind/Heart", hindi: "मन", etym: "Skt: Manas.", note: "The inner self." },
+            { text: "बसिया", transliteration: "basiyā", translation: "Reside", hindi: "बसते हैं", etym: "Skt: Vas (To dwell).", note: "Hanuman carries them in his heart constantly." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 8,
+        fullTransliteration: "Sūkshma rūpa dhari siyahi dikhāvā | Bikata rūpa dhari lanka jarāvā ||",
+        fullTranslation: "Assuming a subtle form you appeared to Sita, and in a terrifying form you burnt Lanka.",
+        words: [
+            { text: "सूक्ष्म", transliteration: "Sūkshma", translation: "Subtle/Tiny", hindi: "छोटा / सूक्ष्म", etym: "Skt: Sukshma.", note: "He shrank his size to avoid detection in Ashok Vatika." },
+            { text: "रूप", transliteration: "rūpa", translation: "Form", hindi: "रूप", etym: "Skt: Rupa.", note: "Appearance." },
+            { text: "धरि", transliteration: "dhari", translation: "Assuming", hindi: "धारण करके", etym: "Skt: Dhri (To hold).", note: "Taking on." },
+            { text: "सियहि", transliteration: "siyahi", translation: "To Sita", hindi: "सीता जी को", etym: "-", note: "Direct object." },
+            { text: "दिखावा", transliteration: "dikhāvā", translation: "Showed", hindi: "दिखाया", etym: "Dri (To see).", note: "Revealed himself." },
+            { text: "बिकट", transliteration: "Bikata", translation: "Terrifying", hindi: "विकराल", etym: "Skt: Vikata (Formidable).", note: "Fearful form taken to intimidate demons." },
+            { text: "रूप", transliteration: "rūpa", translation: "Form", hindi: "रूप", etym: "-", note: "-" },
+            { text: "धरि", transliteration: "dhari", translation: "Holding", hindi: "धारण कर", etym: "-", note: "-" },
+            { text: "लंक", transliteration: "lanka", translation: "Lanka", hindi: "लंका", etym: "Proper Noun.", note: "Ravana's kingdom." },
+            { text: "जरावा", transliteration: "jarāvā", translation: "Burned", hindi: "जलाया", etym: "Jvala (Burn).", note: "The burning of Lanka (Lanka Dahan)." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 9,
+        fullTransliteration: "Bhīma rūpa dhari asura samhāre | Rāmachandra ke kāja samvāre ||",
+        fullTranslation: "Assuming a colossal form you destroyed the demons, and fulfilled the tasks of Ramachandra.",
+        words: [
+            { text: "भीम", transliteration: "Bhīma", translation: "Colossal/Terrible", hindi: "विशाल / भयानक", etym: "Skt: Bhima.", note: "Gigantic form, like the Pandava Bhima." },
+            { text: "रूप", transliteration: "rūpa", translation: "Form", hindi: "रूप", etym: "-", note: "-" },
+            { text: "धरि", transliteration: "dhari", translation: "Assuming", hindi: "धारण करके", etym: "-", note: "-" },
+            { text: "असुर", transliteration: "asura", translation: "Demons", hindi: "राक्षस", etym: "A-Sura (Not divine).", note: "Evil forces." },
+            { text: "सँहारे", transliteration: "samhāre", translation: "Destroyed", hindi: "संहार किया", etym: "Skt: Samhara (Destruction).", note: "Killed in battle." },
+            { text: "रामचंद्र", transliteration: "Rāmachandra", translation: "Ramachandra", hindi: "श्री राम", etym: "Rama + Chandra (Moon).", note: "Rama, who is pleasing like the moon." },
+            { text: "के", transliteration: "ke", translation: "Of", hindi: "के", etym: "-", note: "-" },
+            { text: "काज", transliteration: "kāja", translation: "Tasks", hindi: "काम", etym: "-", note: "Mission." },
+            { text: "सँवारे", transliteration: "samvāre", translation: "Accomplished", hindi: "सफल किये / सुधारे", etym: "Sam (Complete) + Vri (Cover/Arranged).", note: "Successfully completed." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 10,
+        fullTransliteration: "Lāya sajīvana lakhana jiyāye | Śrī raghubīra harashi ura lāye ||",
+        fullTranslation: "You brought the Sanjivani herb and revived Lakshmana; Sri Rama embraced you with joy.",
+        words: [
+            { text: "लाय", transliteration: "Lāya", translation: "Brought", hindi: "लाये", etym: "-", note: "Carried the entire mountain." },
+            { text: "सजीवन", transliteration: "sajīvana", translation: "Life-giving herb", hindi: "संजीवनी बूटी", etym: "San (With) + Jiva (Life).", note: "The herb that restores life." },
+            { text: "लखन", transliteration: "lakhana", translation: "Lakshmana", hindi: "लक्ष्मण", etym: "-", note: "-" },
+            { text: "जियाये", transliteration: "jiyāye", translation: "Revived", hindi: "जीवित किया", etym: "Jiva (Life).", note: "Saved from the Shakti weapon." },
+            { text: "श्री", transliteration: "Śrī", translation: "Lord/Glorious", hindi: "श्री", etym: "Honorific prefix.", note: "-" },
+            { text: "रघुबीर", transliteration: "raghubīra", translation: "Hero of Raghus", hindi: "रघुवीर (राम)", etym: "Raghu (Clan) + Vira (Hero).", note: "Rama." },
+            { text: "हरषि", transliteration: "harashi", translation: "Joyfully", hindi: "हर्षित होकर", etym: "Skt: Harsha (Joy).", note: "With great happiness." },
+            { text: "उर", transliteration: "ura", translation: "Heart/Chest", hindi: "हृदय / छाती", etym: "Skt: Uras.", note: "Bosom." },
+            { text: "लाये", transliteration: "lāye", translation: "Brought close", hindi: "लगाया", etym: "-", note: "Embraced (Aliṅgana)." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 11,
+        fullTransliteration: "Raghupati kīnhī bahuta barāī | Tuma mama priya bharatahi sama bhāī ||",
+        fullTranslation: "Raghupati (Rama) praised you greatly, saying 'You are as dear to me as my brother Bharata'.",
+        words: [
+            { text: "रघुपति", transliteration: "Raghupati", translation: "Lord of Raghus", hindi: "रघुकुल के स्वामी (राम)", etym: "Raghu (Clan) + Pati (Lord).", note: "Lord Rama." },
+            { text: "कीन्ही", transliteration: "kīnhī", translation: "Did", hindi: "की", etym: "Karana (To do).", note: "Performed." },
+            { text: "बहुत", transliteration: "bahuta", translation: "Much/Great", hindi: "बहुत", etym: "Skt: Bahu.", note: "Extensive." },
+            { text: "बड़ाई", transliteration: "barāī", translation: "Praise", hindi: "प्रशंसा", etym: "Vad (To speak/exalt).", note: "Extolling virtues." },
+            { text: "तुम", transliteration: "tuma", translation: "You", hindi: "तुम", etym: "Yushmad.", note: "-" },
+            { text: "मम", transliteration: "mama", translation: "My", hindi: "मेरे", etym: "Skt: Mama.", note: "Possessive." },
+            { text: "प्रिय", transliteration: "priya", translation: "Dear/Beloved", hindi: "प्यारे", etym: "Skt: Priya.", note: "Close to the heart." },
+            { text: "भरतहि", transliteration: "bharatahi", translation: "Bharata", hindi: "भरत के", etym: "Proper Noun.", note: "Rama's younger brother, known for supreme devotion." },
+            { text: "सम", transliteration: "sama", translation: "Equal/Like", hindi: "समान", etym: "Skt: Sama.", note: "Comparison." },
+            { text: "भाई", transliteration: "bhāī", translation: "Brother", hindi: "भाई", etym: "Skt: Bhratri.", note: "A very high honor for a servant/devotee." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 12,
+        fullTransliteration: "Sahasa badana tumharo jasa gāvaī | Asa kahi śrīpati kantha lagāvaī ||",
+        fullTranslation: "The thousand-headed serpent sings your glory,' saying this, the Lord of Lakshmi embraced you.",
+        words: [
+            { text: "सहस", transliteration: "Sahasa", translation: "Thousand", hindi: "हजार", etym: "Skt: Sahasra.", note: "Infinite number." },
+            { text: "बदन", transliteration: "badana", translation: "Mouths/Faces", hindi: "मुख", etym: "Skt: Vadana.", note: "Refers to Sheshnaga (the Cosmic Serpent)." },
+            { text: "तुम्हरो", transliteration: "tumharo", translation: "Your", hindi: "तुम्हारा", etym: "-", note: "-" },
+            { text: "जस", transliteration: "jasa", translation: "Glory/Fame", hindi: "यश", etym: "Skt: Yashas.", note: "Reputation." },
+            { text: "गावैं", transliteration: "gāvaī", translation: "Sing", hindi: "गाते हैं", etym: "Gai (To sing).", note: "Chant praises." },
+            { text: "अस", transliteration: "asa", translation: "Thus/This", hindi: "ऐसा", etym: "-", note: "-" },
+            { text: "कहि", transliteration: "kahi", translation: "Saying", hindi: "कहकर", etym: "Kath (To speak).", note: "-" },
+            { text: "श्रीपति", transliteration: "śrīpati", translation: "Lord of Lakshmi", hindi: "लक्ष्मीपति (राम/विष्णु)", etym: "Sri (Lakshmi) + Pati (Husband).", note: "Lord Vishnu/Rama." },
+            { text: "कंठ", transliteration: "kantha", translation: "Neck/Throat", hindi: "गले", etym: "Skt: Kantha.", note: "Neck." },
+            { text: "लगावैं", transliteration: "lagāvaī", translation: "Embraced", hindi: "लगाया", etym: "-", note: "Hugged affectionately." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 13,
+        fullTransliteration: "Sanakādika brahmādi munīsā | Nārada śārada sahita ahīsā ||",
+        fullTranslation: "Sanaka and the sages, Brahma, gods, Narada, Saraswati, and the King of Serpents...",
+        words: [
+            { text: "सनकादिक", transliteration: "Sanakādika", translation: "Sanaka etc.", hindi: "सनक आदि", etym: "Sanaka + Adi (Etc).", note: "The four mind-born sons of Brahma (Sanaka, Sanandana, Sanatana, Sanatkumara)." },
+            { text: "ब्रह्मादि", transliteration: "brahmādi", translation: "Brahma etc.", hindi: "ब्रह्मा आदि", etym: "Brahma (Creator) + Adi.", note: "The creator god and others." },
+            { text: "मुनीसा", transliteration: "munīsā", translation: "Great Sages", hindi: "मुनीश / ऋषियों के ईश", etym: "Muni (Sage) + Isa (Lord).", note: "Chief among sages." },
+            { text: "नारद", transliteration: "Nārada", translation: "Narada", hindi: "नारद मुनि", etym: "Proper Noun.", note: "The celestial sage/messenger." },
+            { text: "सारद", transliteration: "śārada", translation: "Saraswati", hindi: "सरस्वती", etym: "Sarada.", note: "Goddess of wisdom/speech." },
+            { text: "सहित", transliteration: "sahita", translation: "With/Along with", hindi: "सहित", etym: "Skt: Sahita.", note: "Accompanied by." },
+            { text: "अहीसा", transliteration: "ahīsā", translation: "Lord of Serpents", hindi: "शेषनाग", etym: "Ahi (Snake) + Isa (Lord).", note: "Sheshnaga." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 14,
+        fullTransliteration: "Yama kubera digapāla jahā te | Kabi kobida kahi sake kahā te ||",
+        fullTranslation: "Yama, Kubera, and the guardians of directions; how can poets and scholars describe your glory?",
+        words: [
+            { text: "जम", transliteration: "Yama", translation: "Yama", hindi: "यमराज", etym: "Proper Noun.", note: "God of Death." },
+            { text: "कुबेर", transliteration: "kubera", translation: "Kubera", hindi: "कुबेर", etym: "Proper Noun.", note: "God of Wealth." },
+            { text: "दिगपाल", transliteration: "digapāla", translation: "Guardians of Directions", hindi: "दिशाओं के रक्षक", etym: "Dik (Direction) + Pala (Protector).", note: "The 8 or 10 guardians of the cardinal points." },
+            { text: "जहाँ", transliteration: "jahā", translation: "Where", hindi: "जहाँ", etym: "-", note: "Referencing their realms." },
+            { text: "ते", transliteration: "te", translation: "From/They", hindi: "वे", etym: "-", note: "-" },
+            { text: "कबि", transliteration: "kabi", translation: "Poets", hindi: "कवि", etym: "Skt: Kavi.", note: "Those with insight." },
+            { text: "कोबिद", transliteration: "kobida", translation: "Scholars/Pandits", hindi: "विद्वान", etym: "Skt: Kovida.", note: "Learned ones." },
+            { text: "कहि", transliteration: "kahi", translation: "Tell/Describe", hindi: "कह", etym: "-", note: "-" },
+            { text: "सके", transliteration: "sake", translation: "Can", hindi: "सकें", etym: "Sak (Able).", note: "Have the capacity." },
+            { text: "कहाँ", transliteration: "kahā", translation: "How/Where", hindi: "कहाँ", etym: "-", note: "Implies impossibility (i.e., 'How is it possible?')." },
+            { text: "ते", transliteration: "te", translation: "From", hindi: "से", etym: "-", note: "-" }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 15,
+        fullTransliteration: "Tuma upakāra sugrīvahi kīnhā | Rāma milāya rāja pada dīnhā ||",
+        fullTranslation: "You did a great service to Sugriva, by introducing him to Rama and giving him the kingdom.",
+        words: [
+            { text: "तुम", transliteration: "Tuma", translation: "You", hindi: "तुमने", etym: "-", note: "-" },
+            { text: "उपकार", transliteration: "upakāra", translation: "Favor/Service", hindi: "भलाई / उपकार", etym: "Upa (Near/Under) + Kara (Doing).", note: "Helpful action." },
+            { text: "सुग्रीवहि", transliteration: "sugrīvahi", translation: "To Sugriva", hindi: "सुग्रीव पर", etym: "Su (Good) + Griva (Neck).", note: "The Monkey King." },
+            { text: "कीन्हा", transliteration: "kīnhā", translation: "Did", hindi: "किया", etym: "-", note: "-" },
+            { text: "राम", transliteration: "Rāma", translation: "Rama", hindi: "राम", etym: "-", note: "-" },
+            { text: "मिलाय", transliteration: "milāya", translation: "United/Introduced", hindi: "मिलवा कर", etym: "Mil (To meet).", note: "Arranged the alliance." },
+            { text: "राज", transliteration: "rāja", translation: "Royal/Kingdom", hindi: "राज्य", etym: "Rajan.", note: "Kingship." },
+            { text: "पद", transliteration: "pada", translation: "Status/Position", hindi: "पद", etym: "Skt: Pada.", note: "Rank." },
+            { text: "दीन्हा", transliteration: "dīnhā", translation: "Gave", hindi: "दिया", etym: "Da (To give).", note: "Bestowed." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 16,
+        fullTransliteration: "Tumharo mantra bibhīshana mānā | Lankesvara bhaye saba jaga jānā ||",
+        fullTranslation: "Vibhishana heeded your counsel and became the Lord of Lanka, as the whole world knows.",
+        words: [
+            { text: "तुम्हरो", transliteration: "Tumharo", translation: "Your", hindi: "तुम्हारा", etym: "-", note: "-" },
+            { text: "मंत्र", transliteration: "mantra", translation: "Advice/Counsel", hindi: "सलाह", etym: "Skt: Mantra (Thought/Prayer).", note: "Spiritual or strategic advice." },
+            { text: "बिभीषन", transliteration: "bibhīshana", translation: "Vibhishana", hindi: "विभीषण", etym: "Proper Noun.", note: "Ravana's righteous brother." },
+            { text: "माना", transliteration: "mānā", translation: "Accepted", hindi: "माना", etym: "Man (To think/agree).", note: "Heeded." },
+            { text: "लंकेस्वर", transliteration: "Lankesvara", translation: "Lord of Lanka", hindi: "लंकापति", etym: "Lanka + Ishwara (Lord).", note: "King of Lanka." },
+            { text: "भए", transliteration: "bhaye", translation: "Became", hindi: "बने", etym: "Bhu (To be).", note: "-" },
+            { text: "सब", transliteration: "saba", translation: "All", hindi: "सारा", etym: "Skt: Sarva.", note: "-" },
+            { text: "जग", transliteration: "jaga", translation: "World", hindi: "जगत", etym: "Jagat.", note: "-" },
+            { text: "जाना", transliteration: "jānā", translation: "Knows", hindi: "जानता है", etym: "Jna (To know).", note: "Is famous worldwide." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 17,
+        fullTransliteration: "Yuga sahasra yojana para bhānū | Līlyo tāhi madhura phala jānū ||",
+        fullTranslation: "The sun is thousands of miles away; you swallowed it thinking it to be a sweet fruit.",
+        words: [
+            { text: "जुग", transliteration: "Yuga", translation: "Age/Era", hindi: "युग (संख्या)", etym: "Yuga = 12,000 divine years.", note: "Here used as a unit of calculation." },
+            { text: "सहस्र", transliteration: "sahasra", translation: "Thousand", hindi: "हजार", etym: "1000.", note: "-" },
+            { text: "जोजन", transliteration: "yojana", translation: "Yojana", hindi: "योजन", etym: "Measure of distance (approx 8 miles).", note: "1 Yuga x 1000 x 1 Yojana = Distance to Sun." },
+            { text: "पर", transliteration: "para", translation: "At/On", hindi: "पर", etym: "-", note: "Located at." },
+            { text: "भानू", transliteration: "bhānū", translation: "Sun", hindi: "सूर्य", etym: "Bhanu (Light/Ray).", note: "The Sun God." },
+            { text: "लील्यो", transliteration: "līlyo", translation: "Swallowed", hindi: "निगल लिया", etym: "Skt: Lil (To play/swallow).", note: "As a child, Hanuman leapt and ate the sun." },
+            { text: "ताहि", transliteration: "tāhi", translation: "It", hindi: "उसे", etym: "-", note: "Refers to the sun." },
+            { text: "मधुर", transliteration: "madhura", translation: "Sweet", hindi: "मीठा", etym: "Skt: Madhura.", note: "Delectable." },
+            { text: "फल", transliteration: "phala", translation: "Fruit", hindi: "फल", etym: "Skt: Phala.", note: "-" },
+            { text: "जानू", transliteration: "jānū", translation: "Knowing/Thinking", hindi: "जानकर / समझकर", etym: "Jna (Know).", note: "Mistaking it for a fruit." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 18,
+        fullTransliteration: "Prabhu mudrikā meli mukha māhī | Jaladhi lānghi gaye acharaja nāhī ||",
+        fullTranslation: "Holding the Lord's ring in your mouth, you crossed the ocean; it is no wonder.",
+        words: [
+            { text: "प्रभु", transliteration: "Prabhu", translation: "Lord's", hindi: "प्रभु की", etym: "Skt: Prabhu.", note: "Rama's." },
+            { text: "मुद्रिका", transliteration: "mudrikā", translation: "Ring/Signet", hindi: "अंगूठी", etym: "Skt: Mudra.", note: "The signet ring given as identification for Sita." },
+            { text: "मेलि", transliteration: "meli", translation: "Kept/Placed", hindi: "रखकर", etym: "-", note: "Held securely." },
+            { text: "मुख", transliteration: "mukha", translation: "Mouth", hindi: "मुँह", etym: "Skt: Mukha.", note: "In the mouth." },
+            { text: "माहीं", transliteration: "māhī", translation: "In/Inside", hindi: "में", etym: "Madhye (Middle).", note: "-" },
+            { text: "जलधि", transliteration: "jaladhi", translation: "Ocean", hindi: "समुद्र", etym: "Jala (Water) + Dhi (Container).", note: "The vast sea." },
+            { text: "लाँघि", transliteration: "lānghi", translation: "Leaped/Crossed", hindi: "लाँघ", etym: "Langh (To leap).", note: "Jumped over." },
+            { text: "गये", transliteration: "gaye", translation: "Went", hindi: "गए", etym: "Gam (Go).", note: "-" },
+            { text: "अचरज", transliteration: "acharaja", translation: "Wonder/Surprise", hindi: "आश्चर्य", etym: "Skt: Ashcharya.", note: "Miracle." },
+            { text: "नाहीं", transliteration: "nāhī", translation: "Not", hindi: "नहीं", etym: "Na.", note: "It is not surprising given your power." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 19,
+        fullTransliteration: "Durgama kāja jagata ke jete | Sugama anugraha tumhare tete ||",
+        fullTranslation: "Whatever difficult tasks exist in the world, they become easy by your grace.",
+        words: [
+            { text: "दुर्गम", transliteration: "Durgama", translation: "Difficult", hindi: "कठिन", etym: "Dur (Bad/Hard) + Gam (Go).", note: "Hard to access or achieve." },
+            { text: "काज", transliteration: "kāja", translation: "Tasks/Works", hindi: "काम", etym: "Karya.", note: "Endeavors." },
+            { text: "जगत", transliteration: "jagata", translation: "World", hindi: "संसार", etym: "Jagat.", note: "In this existence." },
+            { text: "के", transliteration: "ke", translation: "Of", hindi: "के", etym: "-", note: "-" },
+            { text: "जेते", transliteration: "jete", translation: "Whichever/As many", hindi: "जितने", etym: "Yat.", note: "However many exist." },
+            { text: "सुगम", transliteration: "sugama", translation: "Easy", hindi: "आसान", etym: "Su (Good) + Gam (Go).", note: "Accessible/Easy." },
+            { text: "अनुग्रह", transliteration: "anugraha", translation: "Grace", hindi: "कृपा", etym: "Anu (After) + Grah (Seize/Accept).", note: "Divine favor/blessing." },
+            { text: "तुम्हारे", transliteration: "tumhare", translation: "Your", hindi: "तुम्हारी", etym: "-", note: "-" },
+            { text: "तेते", transliteration: "tete", translation: "That many", hindi: "वे सब", etym: "Tat.", note: "They all become easy." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 20,
+        fullTransliteration: "Rāma duāre tuma rakhavāre | Hota na āgyā binu paisāre ||",
+        fullTranslation: "You are the guardian at Rama's door; no one enters without your permission.",
+        words: [
+            { text: "राम", transliteration: "Rāma", translation: "Rama", hindi: "राम", etym: "-", note: "-" },
+            { text: "दुआरे", transliteration: "duāre", translation: "Door/Gate", hindi: "द्वार पर", etym: "Dvara.", note: "Entrance to the divine presence." },
+            { text: "तुम", transliteration: "tuma", translation: "You", hindi: "तुम", etym: "-", note: "-" },
+            { text: "रखवारे", transliteration: "rakhavāre", translation: "Keepers/Guardians", hindi: "रक्षक / पहरेदार", etym: "Raksha (Protect).", note: "Sentinel." },
+            { text: "होत", transliteration: "hota", translation: "Happens", hindi: "होता", etym: "Bhu.", note: "-" },
+            { text: "न", transliteration: "na", translation: "No/Not", hindi: "नहीं", etym: "-", note: "-" },
+            { text: "आज्ञा", transliteration: "āgyā", translation: "Permission/Order", hindi: "आज्ञा", etym: "Ajna.", note: "Command." },
+            { text: "बिनु", transliteration: "binu", translation: "Without", hindi: "बिना", etym: "Vina.", note: "-" },
+            { text: "पैसारे", transliteration: "paisāre", translation: "Entrance/Access", hindi: "प्रवेश", etym: "Pravesha.", note: "No one can reach Rama without Hanuman's grace." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 21,
+        fullTransliteration: "Saba sukha lahai tumhārī saranā | Tuma rakshaka kāhū ko daranā ||",
+        fullTranslation: "All happiness is found in your refuge; when you are the protector, who is there to fear?",
+        words: [
+            { text: "सब", transliteration: "Saba", translation: "All", hindi: "सब", etym: "Skt: Sarva.", note: "-" },
+            { text: "सुख", transliteration: "sukha", translation: "Happiness", hindi: "सुख", etym: "Skt: Sukha.", note: "Joy/Comfort." },
+            { text: "लहै", transliteration: "lahai", translation: "Attains/Found", hindi: "प्राप्त होता है", etym: "Labh (To gain).", note: "-" },
+            { text: "तुम्हारी", transliteration: "tumhārī", translation: "Your", hindi: "तुम्हारी", etym: "-", note: "-" },
+            { text: "सरना", transliteration: "saranā", translation: "Refuge/Shelter", hindi: "शरण", etym: "Skt: Sharana.", note: "Surrender." },
+            { text: "तुम", transliteration: "tuma", translation: "You", hindi: "तुम", etym: "-", note: "-" },
+            { text: "रक्षक", transliteration: "rakshaka", translation: "Protector", hindi: "रक्षा करने वाले", etym: "Raksha (Protection).", note: "Guardian." },
+            { text: "काहू", transliteration: "kāhū", translation: "Whom", hindi: "किसका", etym: "Kasya.", note: "-" },
+            { text: "को", transliteration: "ko", translation: "To", hindi: "को", etym: "-", note: "-" },
+            { text: "डरना", transliteration: "daranā", translation: "Fear", hindi: "डर", etym: "Dara.", note: "Why fear anyone else?" }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 22,
+        fullTransliteration: "Āpana teja samhāro āpai | Tīno loka hānka te kāmpai ||",
+        fullTranslation: "You alone can control your own power; the three worlds tremble at your roar.",
+        words: [
+            { text: "आपन", transliteration: "Āpana", translation: "Your own", hindi: "अपना", etym: "Atman.", note: "-" },
+            { text: "तेज", transliteration: "teja", translation: "Radiance/Power", hindi: "तेज / शक्ति", etym: "Skt: Tejas.", note: "Fiery energy." },
+            { text: "सम्हारो", transliteration: "samhāro", translation: "Control/Bear", hindi: "संभालो", etym: "Sam-Bhri (To hold together).", note: "Only you can contain your energy." },
+            { text: "आपै", transliteration: "āpai", translation: "Yourself", hindi: "आप ही", etym: "-", note: "-" },
+            { text: "तीनों", transliteration: "tīno", translation: "Three", hindi: "तीनों", etym: "Tri.", note: "Heaven, Earth, Underworld." },
+            { text: "लोक", transliteration: "loka", translation: "Worlds", hindi: "लोक", etym: "Loka.", note: "Realms." },
+            { text: "हाँक", transliteration: "hānka", translation: "Roar/Call", hindi: "गर्जना / हुंकार", etym: "Hakka (Call).", note: "The war cry of Hanuman." },
+            { text: "ते", transliteration: "te", translation: "From/By", hindi: "से", etym: "-", note: "-" },
+            { text: "काँपै", transliteration: "kāmpai", translation: "Tremble", hindi: "काँपते हैं", etym: "Kamp (To shake).", note: "Shudder in awe/fear." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 23,
+        fullTransliteration: "Bhūta pisācha nikata nahi āvai | Mahābīra jaba nāma sunāvai ||",
+        fullTranslation: "Ghosts and evil spirits do not come near, when one recites the name of Mahabir.",
+        words: [
+            { text: "भूत", transliteration: "Bhūta", translation: "Ghosts", hindi: "भूत", etym: "Bhu (To be/Past).", note: "Spirits of the past/dead." },
+            { text: "पिशाच", transliteration: "pisācha", translation: "Evil Spirits", hindi: "पिशाच", etym: "Pisacha (Flesh eater).", note: "Malevolent entities." },
+            { text: "निकट", transliteration: "nikata", translation: "Near", hindi: "पास", etym: "Nikata.", note: "Proximity." },
+            { text: "नहिं", transliteration: "nahi", translation: "Not", hindi: "नहीं", etym: "Na.", note: "-" },
+            { text: "आवै", transliteration: "āvai", translation: "Come", hindi: "आते", etym: "A-gam.", note: "-" },
+            { text: "महाबीर", transliteration: "Mahābīra", translation: "Great Hero", hindi: "महावीर", etym: "Maha + Vira.", note: "Epithet of Hanuman." },
+            { text: "जब", transliteration: "jaba", translation: "When", hindi: "जब", etym: "Yada.", note: "-" },
+            { text: "नाम", transliteration: "nāma", translation: "Name", hindi: "नाम", etym: "Naman.", note: "-" },
+            { text: "सुनावै", transliteration: "sunāvai", translation: "Recites/Hears", hindi: "सुनाता है", etym: "Shru (To hear).", note: "Utters audibly." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 24,
+        fullTransliteration: "Nāse roga harai saba pīrā | Japata nirantara hanumata bīrā ||",
+        fullTranslation: "Disease is destroyed and all pain is removed, by constantly chanting the name of brave Hanuman.",
+        words: [
+            { text: "नासै", transliteration: "Nāse", translation: "Destroyed", hindi: "नाश होता है", etym: "Nash (Destruction).", note: "Eradicated." },
+            { text: "रोग", transliteration: "roga", translation: "Disease", hindi: "रोग / बीमारी", etym: "Ruj (To break/pain).", note: "Sickness." },
+            { text: "हरै", transliteration: "harai", translation: "Removes/Steals", hindi: "हर लेता है", etym: "Hri.", note: "Takes away." },
+            { text: "सब", transliteration: "saba", translation: "All", hindi: "सब", etym: "-", note: "-" },
+            { text: "पीरा", transliteration: "pīrā", translation: "Pain/Suffering", hindi: "पीड़ा", etym: "Pida.", note: "Physical or mental agony." },
+            { text: "जपत", transliteration: "japata", translation: "Chanting", hindi: "जपने से", etym: "Japa (Muttering prayers).", note: "Repetitive prayer." },
+            { text: "निरंतर", transliteration: "nirantara", translation: "Constantly", hindi: "लगातार", etym: "Nir (Without) + Antara (Gap).", note: "Without break." },
+            { text: "हनुमत", transliteration: "hanumata", translation: "Hanuman", hindi: "हनुमान", etym: "-", note: "-" },
+            { text: "बीरा", transliteration: "bīrā", translation: "Brave/Hero", hindi: "वीर", etym: "Vira.", note: "The courageous one." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 25,
+        fullTransliteration: "Sankata te hanumāna chhudāvai | Mana krama bachana dhyāna jo lāvai ||",
+        fullTranslation: "Hanuman frees one from distress, he who meditates on him with mind, action, and speech.",
+        words: [
+            { text: "संकट", transliteration: "Sankata", translation: "Crisis/Distress", hindi: "संकट / मुसीबत", etym: "Sam + Kata.", note: "Danger or difficulty." },
+            { text: "तें", transliteration: "te", translation: "From", hindi: "से", etym: "-", note: "-" },
+            { text: "हनुमान", transliteration: "Hanumāna", translation: "Hanuman", hindi: "हनुमान", etym: "-", note: "-" },
+            { text: "छुड़ावै", transliteration: "chhudāvai", translation: "Frees/Liberates", hindi: "छुड़ाते हैं / मुक्त करते हैं", etym: "Chhut (Release).", note: "Delivers from." },
+            { text: "मन", transliteration: "mana", translation: "Mind", hindi: "मन", etym: "Manas.", note: "Thought." },
+            { text: "क्रम", transliteration: "krama", translation: "Action/Deed", hindi: "कर्म", etym: "Karma.", note: "Action." },
+            { text: "बचन", transliteration: "bachana", translation: "Speech/Word", hindi: "वचन", etym: "Vachana.", note: "Speech." },
+            { text: "ध्यान", transliteration: "dhyāna", translation: "Meditation/Attention", hindi: "ध्यान", etym: "Dhyai (To contemplate).", note: "Focus." },
+            { text: "जो", transliteration: "jo", translation: "Who", hindi: "जो", etym: "Yah.", note: "-" },
+            { text: "लावै", transliteration: "lāvai", translation: "Brings/Applies", hindi: "लाता है / करता है", etym: "-", note: "Focuses their attention." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 26,
+        fullTransliteration: "Saba para rāma tapasvī rājā | Tina ke kāja sakala tuma sājā ||",
+        fullTranslation: "Rama is the ascetic king over all; you accomplished all his tasks.",
+        words: [
+            { text: "सब", transliteration: "Saba", translation: "All", hindi: "सब", etym: "-", note: "Everyone." },
+            { text: "पर", transliteration: "para", translation: "Over/Above", hindi: "पर", etym: "Upari.", note: "Supreme." },
+            { text: "राम", transliteration: "Rāma", translation: "Rama", hindi: "राम", etym: "-", note: "-" },
+            { text: "तपस्वी", transliteration: "tapasvī", translation: "Ascetic", hindi: "तपस्वी", etym: "Tapas (Heat/Austerity) + Vin.", note: "Even as a King, he lived like a hermit." },
+            { text: "राजा", transliteration: "rājā", translation: "King", hindi: "राजा", etym: "Rajan.", note: "Ruler." },
+            { text: "तिन", transliteration: "tina", translation: "His", hindi: "उनके", etym: "-", note: "Rama's." },
+            { text: "के", transliteration: "ke", translation: "Of", hindi: "के", etym: "-", note: "-" },
+            { text: "काज", transliteration: "kāja", translation: "Tasks", hindi: "काम", etym: "Karya.", note: "Missions." },
+            { text: "सकल", transliteration: "sakala", translation: "All/Entire", hindi: "सारे", etym: "Sa (With) + Kala (Part) = Whole.", note: "Every single one." },
+            { text: "तुम", transliteration: "tuma", translation: "You", hindi: "तुमने", etym: "-", note: "-" },
+            { text: "साजा", transliteration: "sājā", translation: "Arranged/Accomplished", hindi: "सँवारे / पूरे किये", etym: "Sajja (Prepared).", note: "Executed successfully." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 27,
+        fullTransliteration: "Aura manoratha jo koī lāvai | Soī amita jīvana phala pāvai ||",
+        fullTranslation: "Whoever brings any other desire to you, that person attains the imperishable fruit of life.",
+        words: [
+            { text: "और", transliteration: "Aura", translation: "Other", hindi: "और", etym: "Apara.", note: "-" },
+            { text: "मनोरथ", transliteration: "manoratha", translation: "Desire", hindi: "इच्छा", etym: "Manas (Mind) + Ratha (Chariot).", note: "Wish (literally 'chariot of the mind')." },
+            { text: "जो", transliteration: "jo", translation: "Whoever", hindi: "जो", etym: "-", note: "-" },
+            { text: "कोई", transliteration: "koī", translation: "Any", hindi: "कोई", etym: "-", note: "-" },
+            { text: "लावै", transliteration: "lāvai", translation: "Brings", hindi: "लाता है", etym: "-", note: "To you." },
+            { text: "सोई", transliteration: "soī", translation: "He/That", hindi: "वही", etym: "-", note: "-" },
+            { text: "अमित", transliteration: "amita", translation: "Limitless/Imperishable", hindi: "अमित / असीम", etym: "A (Not) + Mita (Measured).", note: "Infinite." },
+            { text: "जीवन", transliteration: "jīvana", translation: "Life", hindi: "जीवन", etym: "Jiv.", note: "Existence." },
+            { text: "फल", transliteration: "phala", translation: "Fruit", hindi: "फल", etym: "Phala.", note: "Result/Reward." },
+            { text: "पावै", transliteration: "pāvai", translation: "Obtains", hindi: "पाता है", etym: "Pra-ap (To reach).", note: "Receives." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 28,
+        fullTransliteration: "Chāro yuga paratāpa tumhārā | Hai parasiddha jagata ujiyārā ||",
+        fullTranslation: "Your glory spans the four Yugas (Ages); your fame illuminates the world.",
+        words: [
+            { text: "चारों", transliteration: "Chāro", translation: "Four", hindi: "चारों", etym: "Chatur.", note: "Satya, Treta, Dvapara, Kali." },
+            { text: "जुग", transliteration: "yuga", translation: "Ages/Yugas", hindi: "युग", etym: "Yuga.", note: "Epochs of time." },
+            { text: "परताप", transliteration: "paratāpa", translation: "Glory/Valor", hindi: "प्रताप", etym: "Pratapa (Heat/Splendor).", note: "Majesty." },
+            { text: "तुम्हारा", transliteration: "tumhārā", translation: "Your", hindi: "तुम्हारा", etym: "-", note: "-" },
+            { text: "है", transliteration: "hai", translation: "Is", hindi: "है", etym: "Asti.", note: "-" },
+            { text: "परसिद्ध", transliteration: "parasiddha", translation: "Famous", hindi: "प्रसिद्ध", etym: "Prasiddha.", note: "Well-known." },
+            { text: "जगत", transliteration: "jagata", translation: "World", hindi: "संसार", etym: "Jagat.", note: "-" },
+            { text: "उजियारा", transliteration: "ujiyārā", translation: "Illuminated/Light", hindi: "उजियारा / प्रकाश", etym: "Ujjvala.", note: "Enlightened by your fame." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 29,
+        fullTransliteration: "Sādhu santa ke tuma rakhavāre | Asura nikandana rāma dulāre ||",
+        fullTranslation: "You are the protector of saints and sages, the destroyer of demons, and the beloved of Rama.",
+        words: [
+            { text: "साधु", transliteration: "Sādhu", translation: "Sages/Good people", hindi: "साधु", etym: "Sadh (To succeed/go straight).", note: "Virtuous ones." },
+            { text: "संत", transliteration: "santa", translation: "Saints", hindi: "संत", etym: "Sat (Truth).", note: "Holy men." },
+            { text: "के", transliteration: "ke", translation: "Of", hindi: "के", etym: "-", note: "-" },
+            { text: "तुम", transliteration: "tuma", translation: "You", hindi: "तुम", etym: "-", note: "-" },
+            { text: "रखवारे", transliteration: "rakhavāre", translation: "Protectors", hindi: "रक्षक", etym: "Raksha.", note: "Guardians." },
+            { text: "असुर", transliteration: "asura", translation: "Demons", hindi: "राक्षस", etym: "A-sura.", note: "Evil forces." },
+            { text: "निकंदन", transliteration: "nikandana", translation: "Destroyer", hindi: "नाश करने वाले", etym: "Ni-krin (To cut down).", note: "Weed out/Exterminate." },
+            { text: "राम", transliteration: "rāma", translation: "Rama", hindi: "राम", etym: "-", note: "-" },
+            { text: "दुलारे", transliteration: "dulāre", translation: "Beloved", hindi: "प्यारे", etym: "Durlabha (Rare/Dear).", note: "Pet/Darling." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 30,
+        fullTransliteration: "Ashta siddhi nau nidhi ke dātā | Asa bara dīna jānakī mātā ||",
+        fullTranslation: "You are the giver of the 8 Siddhis and 9 Nidhis (treasures); Mother Janaki (Sita) granted you this boon.",
+        words: [
+            { text: "अष्ट", transliteration: "Ashta", translation: "Eight", hindi: "आठ", etym: "Ashta.", note: "-" },
+            { text: "सिद्धि", transliteration: "siddhi", translation: "Siddhis/Powers", hindi: "सिद्धि", etym: "Sidh (To attain).", note: "Supernatural powers (e.g., Anima, Mahima)." },
+            { text: "नौ", transliteration: "nau", translation: "Nine", hindi: "नौ", etym: "Nava.", note: "-" },
+            { text: "निधि", transliteration: "nidhi", translation: "Treasures", hindi: "निधि", etym: "Ni-dha (To place).", note: "The 9 divine treasures of Kubera." },
+            { text: "के", transliteration: "ke", translation: "Of", hindi: "के", etym: "-", note: "-" },
+            { text: "दाता", transliteration: "dātā", translation: "Giver", hindi: "देने वाले", etym: "Da (Give).", note: "Donor." },
+            { text: "अस", transliteration: "asa", translation: "This/Such", hindi: "ऐसा", etym: "-", note: "-" },
+            { text: "बर", transliteration: "bara", translation: "Boon", hindi: "वरदान", etym: "Vara.", note: "Blessing." },
+            { text: "दीन", transliteration: "dīna", translation: "Gave", hindi: "दिया", etym: "Da.", note: "-" },
+            { text: "जानकी", transliteration: "jānakī", translation: "Janaki", hindi: "जानकी (सीता)", etym: "Daughter of Janaka.", note: "Sita." },
+            { text: "माता", transliteration: "mātā", translation: "Mother", hindi: "माता", etym: "Matri.", note: "Mother." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 31,
+        fullTransliteration: "Rāma rasāyana tumhare pāsā | Sadā raho raghupati ke dāsā ||",
+        fullTranslation: "You hold the essence (elixir) of devotion to Rama; may you always remain the servant of Raghupati.",
+        words: [
+            { text: "राम", transliteration: "Rāma", translation: "Rama", hindi: "राम", etym: "-", note: "-" },
+            { text: "रसायन", transliteration: "rasāyana", translation: "Elixir/Essence", hindi: "रसायन (भक्ति का सार)", etym: "Rasa (Essence) + Ayana (Path/Vehicle).", note: "Medicine that cures the disease of birth and death." },
+            { text: "तुम्हरे", transliteration: "tumhare", translation: "Your", hindi: "तुम्हारे", etym: "-", note: "-" },
+            { text: "पासा", transliteration: "pāsā", translation: "With/Near", hindi: "पास", etym: "Parshva.", note: "In your possession." },
+            { text: "सदा", transliteration: "sadā", translation: "Always", hindi: "हमेशा", etym: "Sada.", note: "Eternally." },
+            { text: "रहो", transliteration: "raho", translation: "Remain", hindi: "रहना", etym: "Rah.", note: "-" },
+            { text: "रघुपति", transliteration: "raghupati", translation: "Lord of Raghus", hindi: "रघुपति", etym: "-", note: "Rama." },
+            { text: "के", transliteration: "ke", translation: "Of", hindi: "के", etym: "-", note: "-" },
+            { text: "दासा", transliteration: "dāsā", translation: "Servant", hindi: "दास", etym: "Dasa.", note: "The humble servant of the Lord." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 32,
+        fullTransliteration: "Tumhare bhajana rāma ko pāvai | Janama janama ke dukha bisarāvai ||",
+        fullTranslation: "Through devotion to you, one attains Rama, and forgets the sorrows of many lifetimes.",
+        words: [
+            { text: "तुम्हरे", transliteration: "Tumhare", translation: "Your", hindi: "तुम्हारे", etym: "-", note: "-" },
+            { text: "भजन", transliteration: "bhajana", translation: "Worship/Devotion", hindi: "भजन", etym: "Bhaj (To share/worship).", note: "Singing praises." },
+            { text: "राम", transliteration: "rāma", translation: "Rama", hindi: "राम", etym: "-", note: "-" },
+            { text: "को", transliteration: "ko", translation: "To", hindi: "को", etym: "-", note: "-" },
+            { text: "पावै", transliteration: "pāvai", translation: "Attains", hindi: "पाता है", etym: "Pra-ap.", note: "Reaches." },
+            { text: "जनम", transliteration: "janama", translation: "Birth", hindi: "जन्म", etym: "Janman.", note: "-" },
+            { text: "जनम", transliteration: "janama", translation: "Birth", hindi: "जन्म", etym: "-", note: "Repeated births (Reincarnation)." },
+            { text: "के", transliteration: "ke", translation: "Of", hindi: "के", etym: "-", note: "-" },
+            { text: "दुख", transliteration: "dukha", translation: "Sorrow/Pain", hindi: "दुख", etym: "Duhkha.", note: "Suffering of samsara." },
+            { text: "बिसरावै", transliteration: "bisarāvai", translation: "Forgets/Destroys", hindi: "बिसरा देता है / भूल जाता है", etym: "Vismri (To forget).", note: "Liberated from past karmas." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 33,
+        fullTransliteration: "Anta kāla raghubara pura jāī | Jahā janma hari bhakta kahāī ||",
+        fullTranslation: "At the end of time, one goes to Rama's abode, where if born again, one is known as a devotee of Hari.",
+        words: [
+            { text: "अंत", transliteration: "Anta", translation: "End", hindi: "अंत", etym: "Anta.", note: "Death." },
+            { text: "काल", transliteration: "kāla", translation: "Time", hindi: "समय", etym: "Kala.", note: "Moment of death." },
+            { text: "रघुबर", transliteration: "raghubara", translation: "Rama's", hindi: "रघुवर", etym: "-", note: "-" },
+            { text: "पुर", transliteration: "pura", translation: "City/Abode", hindi: "धाम / नगर", etym: "Pura.", note: "Saket Loka (Divine Abode)." },
+            { text: "जाई", transliteration: "jāī", translation: "Goes", hindi: "जाता है", etym: "Ya (Go).", note: "-" },
+            { text: "जहाँ", transliteration: "jahā", translation: "Where", hindi: "जहाँ", etym: "-", note: "If reborn." },
+            { text: "जन्म", transliteration: "janma", translation: "Birth", hindi: "जन्म", etym: "Janman.", note: "Taking birth." },
+            { text: "हरि", transliteration: "hari", translation: "Hari/God", hindi: "हरि (विष्णु)", etym: "Hri (To take away sins).", note: "Vishnu/Rama." },
+            { text: "भक्त", transliteration: "bhakta", translation: "Devotee", hindi: "भक्त", etym: "Bhaj.", note: "One devoted." },
+            { text: "कहाई", transliteration: "kahāī", translation: "Called", hindi: "कहलाता है", etym: "Kath.", note: "Known as." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 34,
+        fullTransliteration: "Aura devatā chitta na dharaī | Hanumata seī sarba sukha karaī ||",
+        fullTranslation: "Even without worshipping other deities, one attains all happiness by serving Hanuman.",
+        words: [
+            { text: "और", transliteration: "Aura", translation: "Other", hindi: "और", etym: "Apara.", note: "-" },
+            { text: "देवता", transliteration: "devatā", translation: "Deities", hindi: "देवता", etym: "Div (Shine).", note: "Gods." },
+            { text: "चित्त", transliteration: "chitta", translation: "Mind/Heart", hindi: "चित्त / मन", etym: "Chit (Consciousness).", note: "Focus." },
+            { text: "न", transliteration: "na", translation: "Not", hindi: "नहीं", etym: "Na.", note: "-" },
+            { text: "धरई", transliteration: "dharaī", translation: "Keep/Place", hindi: "धरता", etym: "Dhri.", note: "Does not need to focus elsewhere." },
+            { text: "हनुमत", transliteration: "hanumata", translation: "Hanuman", hindi: "हनुमान", etym: "-", note: "-" },
+            { text: "सेइ", transliteration: "seī", translation: "Serving", hindi: "सेवा करके", etym: "Sev (To serve).", note: "Worshipping." },
+            { text: "सर्ब", transliteration: "sarba", translation: "All", hindi: "सब", etym: "Sarva.", note: "-" },
+            { text: "सुख", transliteration: "sukha", translation: "Happiness", hindi: "सुख", etym: "Sukha.", note: "-" },
+            { text: "करई", transliteration: "karaī", translation: "Does/Gives", hindi: "करता है", etym: "Kri.", note: "Bestows." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 35,
+        fullTransliteration: "Sankata kate mite saba pīrā | Jo sumirai hanumata balabīrā ||",
+        fullTranslation: "All difficulties are cut away and pain erased, for one who remembers the mighty Hanuman.",
+        words: [
+            { text: "संकट", transliteration: "Sankata", translation: "Crisis", hindi: "संकट", etym: "-", note: "Troubles." },
+            { text: "कटै", transliteration: "kate", translation: "Cut/Removed", hindi: "कट जाता है", etym: "Krit (Cut).", note: "Destroyed." },
+            { text: "मिटै", transliteration: "mite", translation: "Erased", hindi: "मिट जाता है", etym: "Mrishta.", note: "Wiped out." },
+            { text: "सब", transliteration: "saba", translation: "All", hindi: "सब", etym: "-", note: "-" },
+            { text: "पीरा", transliteration: "pīrā", translation: "Pain", hindi: "पीड़ा", etym: "Pida.", note: "Suffering." },
+            { text: "जो", transliteration: "jo", translation: "Who", hindi: "जो", etym: "-", note: "-" },
+            { text: "सुमिरै", transliteration: "sumirai", translation: "Remembers", hindi: "सुमिरन करता है", etym: "Smaran.", note: "Calls upon." },
+            { text: "हनुमत", transliteration: "hanumata", translation: "Hanuman", hindi: "हनुमान", etym: "-", note: "-" },
+            { text: "बलबीरा", transliteration: "balabīrā", translation: "Mighty Hero", hindi: "बलवान वीर", etym: "Bala (Strength) + Vira (Hero).", note: "The powerful one." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 36,
+        fullTransliteration: "Jai jai jai hanumāna gosāī | Kripā karahu gurudeva kī nāī ||",
+        fullTranslation: "Victory, Victory, Victory to Lord Hanuman! Bestow your grace as a Guru does.",
+        words: [
+            { text: "जै", transliteration: "Jai", translation: "Victory", hindi: "जय", etym: "Ji.", note: "Hail." },
+            { text: "जै", transliteration: "jai", translation: "Victory", hindi: "जय", etym: "-", note: "-" },
+            { text: "जै", transliteration: "jai", translation: "Victory", hindi: "जय", etym: "-", note: "-" },
+            { text: "हनुमान", transliteration: "hanumāna", translation: "Hanuman", hindi: "हनुमान", etym: "-", note: "-" },
+            { text: "गोसाईं", transliteration: "gosāī", translation: "Lord/Master", hindi: "स्वामी / इन्द्रियों के मालिक", etym: "Go (Senses/Cows) + Swami (Master).", note: "Master of the senses." },
+            { text: "कृपा", transliteration: "kripā", translation: "Grace", hindi: "कृपा", etym: "Kripa.", note: "Compassion." },
+            { text: "करहु", transliteration: "karahu", translation: "Do/Bestow", hindi: "करें", etym: "Kri.", note: "Grant me." },
+            { text: "गुरुदेव", transliteration: "gurudeva", translation: "Divine Teacher", hindi: "गुरुदेव", etym: "Guru (Teacher) + Deva (God).", note: "Spiritual master." },
+            { text: "की", transliteration: "kī", translation: "Of", hindi: "की", etym: "-", note: "-" },
+            { text: "नाईं", transliteration: "nāī", translation: "Like", hindi: "तरह", etym: "Nyaya (Manner).", note: "In the manner of." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 37,
+        fullTransliteration: "Jo śata bāra pātha kara koī | Chhūtahi bandi mahā sukha hoī ||",
+        fullTranslation: "Whoever recites this a hundred times, is freed from bondage and attains great happiness.",
+        words: [
+            { text: "जो", transliteration: "Jo", translation: "Whoever", hindi: "जो", etym: "-", note: "-" },
+            { text: "शत", transliteration: "śata", translation: "Hundred", hindi: "सौ", etym: "Shata.", note: "100 times." },
+            { text: "बार", transliteration: "bāra", translation: "Times", hindi: "बार", etym: "Vara.", note: "Occasions." },
+            { text: "पाठ", transliteration: "pātha", translation: "Recitation", hindi: "पाठ", etym: "Patha (Reading).", note: "Chanting." },
+            { text: "कर", transliteration: "kara", translation: "Does", hindi: "करे", etym: "Kri.", note: "-" },
+            { text: "कोई", transliteration: "koī", translation: "Anyone", hindi: "कोई", etym: "-", note: "-" },
+            { text: "छूटहि", transliteration: "chhūtahi", translation: "Freed", hindi: "छूट जाता है", etym: "Chhut.", note: "Liberated." },
+            { text: "बंदि", transliteration: "bandi", translation: "Bondage/Prison", hindi: "बंधन", etym: "Bandha.", note: "Material attachment or physical prison." },
+            { text: "महा", transliteration: "mahā", translation: "Great", hindi: "महा / अत्यधिक", etym: "Maha.", note: "Immense." },
+            { text: "सुख", transliteration: "sukha", translation: "Happiness", hindi: "सुख", etym: "Sukha.", note: "Bliss." },
+            { text: "होई", transliteration: "hoī", translation: "Happens/Becomes", hindi: "होता है", etym: "Bhu.", note: "Attains." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 38,
+        fullTransliteration: "Jo yaha padhai hanumāna chālīsā | Hoya siddhi sākhī gaurīsā ||",
+        fullTranslation: "Whoever reads this Hanuman Chalisa attains perfection; Shiva is the witness.",
+        words: [
+            { text: "जो", transliteration: "Jo", translation: "Whoever", hindi: "जो", etym: "-", note: "-" },
+            { text: "यह", transliteration: "yaha", translation: "This", hindi: "यह", etym: "-", note: "-" },
+            { text: "पढ़ै", transliteration: "padhai", translation: "Reads", hindi: "पढ़ता है", etym: "Path.", note: "-" },
+            { text: "हनुमान", transliteration: "hanumāna", translation: "Hanuman", hindi: "हनुमान", etym: "-", note: "-" },
+            { text: "चालीसा", transliteration: "chālīsā", translation: "Chalisa", hindi: "चालीसा", etym: "Chatvarimshat (40).", note: "Hymn of 40 verses." },
+            { text: "होय", transliteration: "hoya", translation: "Becomes", hindi: "होता है", etym: "Bhu.", note: "-" },
+            { text: "सिद्धि", transliteration: "siddhi", translation: "Perfection/Power", hindi: "सिद्ध", etym: "Siddhi.", note: "Success/Attainment." },
+            { text: "साखी", transliteration: "sākhī", translation: "Witness", hindi: "साक्षी / गवाह", etym: "Sakshin.", note: "Testimony." },
+            { text: "गौरीसा", transliteration: "gaurīsā", translation: "Lord of Gauri", hindi: "गौरी के ईश (शिव)", etym: "Gauri (Parvati) + Isa (Lord).", note: "Lord Shiva certifies this truth." }
+        ]
+    },
+    {
+        type: "Chaupai",
+        verseIndex: 39,
+        fullTransliteration: "Tulasīdāsa sadā hari cherā | Kījai nātha hridaya maha derā ||",
+        fullTranslation: "Tulsidas is always the servant of Hari; O Lord, make your encampment in my heart.",
+        words: [
+            { text: "तुलसीदास", transliteration: "Tulasīdāsa", translation: "Tulsidas", hindi: "तुलसीदास", etym: "Proper Noun.", note: "The poet-saint who wrote this hymn." },
+            { text: "सदा", transliteration: "sadā", translation: "Always", hindi: "सदा", etym: "Sada.", note: "Eternally." },
+            { text: "हरि", transliteration: "hari", translation: "Hari", hindi: "हरि (राम)", etym: "Hri.", note: "God." },
+            { text: "चेरा", transliteration: "cherā", translation: "Disciple/Servant", hindi: "सेवक / शिष्य", etym: "Cheta (Servant).", note: "Devotee." },
+            { text: "कीजै", transliteration: "kījai", translation: "Do/Make", hindi: "कीजिये", etym: "Kri.", note: "Please do." },
+            { text: "नाथ", transliteration: "nātha", translation: "Lord", hindi: "स्वामी", etym: "Natha.", note: "Master." },
+            { text: "हृदय", transliteration: "hridaya", translation: "Heart", hindi: "हृदय", etym: "Hridaya.", note: "The spiritual heart." },
+            { text: "मँह", transliteration: "maha", translation: "In", hindi: "में", etym: "Madhye.", note: "Inside." },
+            { text: "डेरा", transliteration: "derā", translation: "Home/Camp", hindi: "डेरा / निवास", etym: "Desha (Place/Tent).", note: "Reside permanently." }
+        ]
+    },
+    {
+        type: "Doha (End)",
+        verseIndex: 1,
+        fullTransliteration: "Pavanatanaya sankata harana mangala mūrti rūpa | Rāma lakhana sītā sahita hridaya basahu sura bhūpa ||",
+        fullTranslation: "Son of the Wind, remover of sorrow, embodiment of auspiciousness. Dwell in my heart, O King of Gods, along with Rama, Lakshmana, and Sita.",
+        words: [
+            { text: "पवनतनय", transliteration: "Pavanatanaya", translation: "Son of Wind", hindi: "पवन पुत्र", etym: "Pavana + Tanaya (Son).", note: "Hanuman." },
+            { text: "संकट", transliteration: "sankata", translation: "Sorrow/Crisis", hindi: "संकट", etym: "-", note: "Troubles." },
+            { text: "हरन", transliteration: "harana", translation: "Remover", hindi: "हरने वाले", etym: "Harana.", note: "Destroyer of pain." },
+            { text: "मंगल", transliteration: "mangala", translation: "Auspicious", hindi: "मंगल / शुभ", etym: "Mangala.", note: "Good fortune." },
+            { text: "मूरति", transliteration: "mūrti", translation: "Form/Image", hindi: "मूर्ति", etym: "Murti.", note: "Embodiment." },
+            { text: "रूप", transliteration: "rūpa", translation: "Form", hindi: "रूप", etym: "Rupa.", note: "Shape." },
+            { text: "राम", transliteration: "Rāma", translation: "Rama", hindi: "राम", etym: "-", note: "-" },
+            { text: "लखन", transliteration: "lakhana", translation: "Lakshmana", hindi: "लक्ष्मण", etym: "-", note: "-" },
+            { text: "सीता", transliteration: "sītā", translation: "Sita", hindi: "सीता", etym: "-", note: "-" },
+            { text: "सहित", transliteration: "sahita", translation: "With", hindi: "साथ", etym: "Sahita.", note: "Together." },
+            { text: "हृदय", transliteration: "hridaya", translation: "Heart", hindi: "हृदय", etym: "-", note: "-" },
+            { text: "बसहु", transliteration: "basahu", translation: "Dwell/Reside", hindi: "बसिये", etym: "Vas.", note: "Live in me." },
+            { text: "सुर", transliteration: "sura", translation: "Gods", hindi: "देवता", etym: "Sura.", note: "Divinities." },
+            { text: "भूप", transliteration: "bhūpa", translation: "King", hindi: "राजा", etym: "Bhu (Earth) + Pa (Protector).", note: "King of Gods (Indra, or here referring to Hanuman/Rama as supreme)." }
+        ]
+    },
+    {
+        type: "Doha (End)",
+        verseIndex: 1,
+        fullTransliteration: "Pavanatanaya sankata harana mangala mūrti rūpa | Rāma lakhana sītā sahita hridaya basahu sura bhūpa ||",
+        fullTranslation: "Son of the Wind, remover of sorrow, embodiment of auspiciousness. Dwell in my heart, O King of Gods, along with Rama, Lakshmana, and Sita.",
+        words: [
+            { text: "पवनतनय", transliteration: "Pavanatanaya", translation: "Son of Wind", hindi: "पवन पुत्र", etym: "Pavana (Wind) + Tanaya (Son).", note: "Hanuman, born of the Wind God's spiritual energy." },
+            { text: "संकट", transliteration: "sankata", translation: "Sorrow/Crisis", hindi: "संकट / कष्ट", etym: "Sam + Kata.", note: "Difficulties of worldly existence." },
+            { text: "हरन", transliteration: "harana", translation: "Remover", hindi: "हरने वाले", etym: "Harana (Taking away).", note: "One who destroys pain." },
+            { text: "मंगल", transliteration: "mangala", translation: "Auspicious", hindi: "मंगल / शुभ", etym: "Mangala.", note: "Blessedness and welfare." },
+            { text: "मूरति", transliteration: "mūrti", translation: "Form/Image", hindi: "मूर्ति", etym: "Murti.", note: "Physical embodiment." },
+            { text: "रूप", transliteration: "rūpa", translation: "Embodiment", hindi: "रूप", etym: "Rupa.", note: "Manifestation." },
+            { text: "राम", transliteration: "Rāma", translation: "Rama", hindi: "राम", etym: "-", note: "The 7th Avatar of Vishnu." },
+            { text: "लखन", transliteration: "lakhana", translation: "Lakshmana", hindi: "लक्ष्मण", etym: "-", note: "Rama's loyal brother." },
+            { text: "सीता", transliteration: "sītā", translation: "Sita", hindi: "सीता", etym: "-", note: "Rama's consort, the Earth goddess." },
+            { text: "सहित", transliteration: "sahita", translation: "With/Along with", hindi: "सहित / साथ", etym: "Sahita.", note: "In the company of." },
+            { text: "हृदय", transliteration: "hridaya", translation: "Heart", hindi: "हृदय / दिल", etym: "Hridaya.", note: "The spiritual center of the devotee." },
+            { text: "बसहु", transliteration: "basahu", translation: "Dwell/Reside", hindi: "बसिये / निवास करें", etym: "Vas (To live).", note: "Make my heart your permanent home." },
+            { text: "सुर", transliteration: "sura", translation: "Gods", hindi: "देवता", etym: "Sura.", note: "Divine beings." },
+            { text: "भूप", transliteration: "bhūpa", translation: "King", hindi: "राजा", etym: "Bhu (Earth) + Pa (Protector).", note: "Ruler. 'Surabhupa' refers to Rama as the King of Gods." }
+        ]
+    }
+    ];
+
+    // 2. RENDER LOGIC
+    const container = document.getElementById('chalisa-container');
+    
+    function renderChalisa() {
+        container.innerHTML = '';
+        
+        chalisaData.forEach((verse, index) => {
+            const verseDiv = document.createElement('div');
+            verseDiv.className = 'verse-block';
+
+            // Construct Devanagari Line with clickable spans
+            let devanagariHTML = '<div class="devanagari-line">';
+            verse.words.forEach((word, wordIdx) => {
+                // Store data indices in data attributes
+                switch (word.text) {
+                    case "|": devanagariHTML += "|"; break;
+                    case "||": devanagariHTML += "||"; break;
+                    case "<br>": devanagariHTML += "<br>"; break;
+                    default:
+                        devanagariHTML += `<span class="word-span" onclick="openWord(${index}, ${wordIdx})">${word.text}</span> `;
+                }
+            });
+            devanagariHTML += '</div>';
+
+            // Construct transliteration Line with clickable spans
+            let transliterationHTML = '<div class="transliteration-line">';
+            verse.words.forEach((word, wordIdx) => {
+                // Store data indices in data attributes
+                switch (word.text) {
+                    case "|": transliterationHTML += "|"; break;
+                    case "||": transliterationHTML += "||"; break;
+                    case "<br>": transliterationHTML += "<br>"; break;
+                    default:
+                        transliterationHTML += `<span class="word-span" onclick="openWord(${index}, ${wordIdx})">${word.transliteration}</span> `;
+                }
+            });
+            transliterationHTML += '</div>';
+
+            // <div class="transliteration-line">${verse.fullTransliteration}</div>
+            verseDiv.innerHTML = `
+                <div class="verse-type">${verse.type} ${verse.verseIndex}</div>
+                ${devanagariHTML}
+                ${transliterationHTML}
+                <div class="translation-line">${verse.fullTranslation}</div>
+            `;
+            
+            container.appendChild(verseDiv);
+        });
+    }
+
+    // UPDATED: Logic inverted to "Hide"
+    function updateVisibility() {
+        // If checked, we ADD the class that hides the text
+        if(toggleTranslit.checked) document.body.classList.add('hide-translit');
+        else document.body.classList.remove('hide-translit');
+
+        if(toggleTransl.checked) document.body.classList.add('hide-transl');
+        else document.body.classList.remove('hide-transl');
+    }
+
+    // 3. INTERACTION LOGIC
+    // Toggles
+    const toggleTranslit = document.getElementById('toggle-translit');
+    const toggleTransl = document.getElementById('toggle-transl');
+
+    // Add Listeners
+    toggleTranslit.addEventListener('change', updateVisibility);
+    toggleTransl.addEventListener('change', updateVisibility);
+
+
+    toggleTranslit.addEventListener('change', (e) => {
+        if(e.target.checked) document.body.classList.add('show-translit');
+        else document.body.classList.remove('show-translit');
+    });
+
+    toggleTransl.addEventListener('change', (e) => {
+        if(e.target.checked) document.body.classList.add('show-transl');
+        else document.body.classList.remove('show-transl');
+    });
+
+    // Modal Logic
+    const modal = document.getElementById('modal');
+
+    function openWord(verseIdx, wordIdx) {
+        const wordData = chalisaData[verseIdx].words[wordIdx];
+        
+        // Populate Modal
+        document.getElementById('m-word').innerText = wordData.text;
+        document.getElementById('m-translit').innerText = wordData.transliteration;
+        document.getElementById('m-translation').innerText = wordData.translation;
+        document.getElementById('m-hindi').innerText = wordData.hindi;
+        document.getElementById('m-etymology').innerText = wordData.etym;
+        document.getElementById('m-note').innerText = wordData.note;
+
+        // Show Modal
+        modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        modal.style.display = 'none';
+    }
+
+    // Close modal if clicking outside content
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            closeModal();
+        }
+    }
+
+    // Initialize
+    renderChalisa();
+
+</script>
+
+</body>
+</html>
