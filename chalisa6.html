@@ -35,6 +35,15 @@
             margin-bottom: 10px;
         }
 
+        .subtitle {
+            color: var(--text-light);
+            font-size: 1.1rem;
+            font-style: italic;
+            margin-top: -5px;   /* Pulls it closer to the main title */
+            margin-bottom: 20px; /* Pushes the settings button down */
+            font-weight: 400;
+        }
+
         .controls {
             display: flex;
             justify-content: center;
@@ -175,6 +184,9 @@
 
 <header>
     <h1>Hanuman Chalisa</h1>
+
+    <p class="subtitle">Click on any word for specific definition & translation</p>
+
     <div class="controls">
         <label class="toggle-label">
             <input type="checkbox" id="toggle-translit">Hide Transliteration
