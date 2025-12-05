@@ -13,25 +13,7 @@
             --modal-bg: #ffffff;
         }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-dark);
-            margin: 0;
-            padding: 20px;
-            line-height: 1.6;
-
-            /* NEW: Background Image Settings */
-            background-image: url('hanuman-bg.png'); /* Make sure filename matches */
-            background-size: cover;       /* Stretches image to fit screen */
-            background-position: center;  /* Centers the image */
-            background-attachment: fixed; /* Keeps image still while scrolling */
-            background-repeat: no-repeat;
-            
-            /* Fallback color if image doesn't load */
-            background-color: var(--bg-color); 
-            color: var(--text-dark);
-        }
+     
 
         /* Controls Header */
         header {
@@ -201,30 +183,51 @@
         .detail-text { color: var(--text-light); }
 
 
- /* === MOBILE OVERRIDES === */
-/* This block only runs on screens narrower than 768px (phones & small tablets) */
+ /* 1. Reset Body to be transparent so we see the layer behind it */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 20px;
+    line-height: 1.6;
+    color: var(--text-dark);
+    background: transparent; /* Important! */
+    position: relative;
+}
+
+/* 2. Style the separate Background Layer */
+#background-layer {
+    position: fixed; /* Stick to the screen */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;   /* Full viewport height */
+    z-index: -1;     /* Send to back */
+    
+    /* Default Desktop Image */
+    background-image: url('hanuman-bg.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* 3. Mobile Override */
 @media (max-width: 768px) {
+    /* Switch image on the Layer, NOT the body */
+    #background-layer {
+        background-image: url('hanuman-bg-mobile.png');
+        background-position: center top; /* Focus on the face */
+    }
+    
     body {
-        /* 1. Switch to the TALL image */
-        background-image: url('hanuman-bg-mobile.jpg');
-
-        /* 2. Change alignment */
-        /* Anchor image to the top-center so Hanuman's face is never cut off */
-        background-position: top center;
-
-        /* 3. Turn off "fixed" attachment on mobile */
-        /* IMPORTANT: 'fixed' backgrounds often jitter or zoom incorrectly on iPhones. 
-           'scroll' makes it behave like a normal image that moves with the page, which is smoother on mobile. */
-        background-attachment: scroll;
-        
-        /* Optional: reduce body padding on small screens */
-        padding: 10px;
+        padding: 10px; /* Smaller padding for phones */
     }
 }
 
     </style>
 </head>
 <body>
+
+    <div id="background-layer"></div>
 
 <header>
     <h1>Hanuman Chalisa</h1>
