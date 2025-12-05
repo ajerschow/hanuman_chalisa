@@ -201,16 +201,24 @@
         .detail-text { color: var(--text-light); }
 
 
-        /* MOBILE OPTIMIZATIONS */
+ /* === MOBILE OVERRIDES === */
+/* This block only runs on screens narrower than 768px (phones & small tablets) */
 @media (max-width: 768px) {
     body {
-        /* Remove the image on small screens */
-        background-image: none;
+        /* 1. Switch to the TALL image */
+        background-image: url('hanuman-mobile.png');
+
+        /* 2. Change alignment */
+        /* Anchor image to the top-center so Hanuman's face is never cut off */
+        background-position: top center;
+
+        /* 3. Turn off "fixed" attachment on mobile */
+        /* IMPORTANT: 'fixed' backgrounds often jitter or zoom incorrectly on iPhones. 
+           'scroll' makes it behave like a normal image that moves with the page, which is smoother on mobile. */
+        background-attachment: scroll;
         
-        /* Use a spiritual Saffron/Gold gradient instead */
-        background: linear-gradient(135deg, #fdfbf7 0%, #fff0dc 100%);
-        
-        background-attachment: fixed; /* Gradients work fine with fixed */
+        /* Optional: reduce body padding on small screens */
+        padding: 10px;
     }
 }
 
