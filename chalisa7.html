@@ -204,26 +204,16 @@
         /* MOBILE OPTIMIZATIONS */
 @media (max-width: 768px) {
     body {
-        /* 1. Turn off "fixed" on mobile (fixes scrolling glitches on iOS) */
-        background-attachment: scroll;
+        /* Remove the image on small screens */
+        background-image: none;
         
-        /* 2. Anchor image to the top-center so the face isn't cut off */
-        background-position: top center;
+        /* Use a spiritual Saffron/Gold gradient instead */
+        background: linear-gradient(135deg, #fdfbf7 0%, #fff0dc 100%);
         
-        /* 3. Ensure it covers the screen */
-        background-size: cover;
-    }
-
-    /* Optional: Make text cards more solid on mobile for easier reading */
-    .verse-block {
-        background: rgba(255, 255, 255, 0.96);
-    }
-    
-    /* Optional: Reduce padding on mobile */
-    body {
-        padding: 10px;
+        background-attachment: fixed; /* Gradients work fine with fixed */
     }
 }
+
     </style>
 </head>
 <body>
