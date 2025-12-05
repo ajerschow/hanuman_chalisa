@@ -194,32 +194,38 @@ body {
     position: relative;
 }
 
-/* 2. Style the separate Background Layer */
+/* === BACKGROUND LAYER (DESKTOP) === */
 #background-layer {
-    position: fixed; /* Stick to the screen */
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
-    height: 100vh;   /* Full viewport height */
-    z-index: -1;     /* Send to back */
+    height: 100vh;
+    z-index: -1;
     
-    /* Default Desktop Image */
-    background-image: url('hanuman-bg.png');
+    /* 1. DEBUG COLOR: If you see Orange, your image path is wrong */
+    background-color: var(--primary); 
+
+    /* 2. IMAGE: Check your file extension! (.jpg or .png?) */
+    background-image: url('hanuman-desktop.png'); 
+    
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
 }
 
-/* 3. Mobile Override */
+/* === MOBILE OVERRIDES === */
 @media (max-width: 768px) {
-    /* Switch image on the Layer, NOT the body */
     #background-layer {
-        background-image: url('hanuman-bg-mobile.jpg');
-        background-position: center top; /* Focus on the face */
+        /* 3. MOBILE IMAGE: Check if this file is actually .jpg in your folder! */
+        background-image: url('hanuman-mobile.png');
+        
+        background-position: top center;
     }
     
-    body {
-        padding: 10px; /* Smaller padding for phones */
+    /* Ensure text cards are slightly transparent so you can see the bg */
+    .verse-block {
+        background: rgba(255, 255, 255, 0.92); 
     }
 }
 
